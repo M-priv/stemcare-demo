@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowUp } from 'lucide-react';
 
 interface DemoChatInputProps {
   onSendMessage: (message: string) => void;
@@ -104,7 +105,7 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
           onClick={handleSend}
           aria-label="Send message"
         >
-          Send
+          <ArrowUp size={16} />
         </button>
       </div>
 

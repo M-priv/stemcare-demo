@@ -2532,11 +2532,6 @@ p {
     flex-wrap: nowrap;
   }
 
-  .demo-input-card__send-btn {
-    padding: 0 0.7rem;
-    font-size: 0.8rem;
-  }
-
   .demo-tour-card {
     width: calc(100vw - 2rem);
     max-height: calc(100vh - 2rem);
