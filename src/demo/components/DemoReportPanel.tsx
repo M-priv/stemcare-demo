@@ -129,21 +129,6 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
         </div>
       </div>
 
-      {/* Status Bar */}
-      <div className="demo-report-panel__status-bar">
-        <div className="demo-report-panel__status-left">
-          <span className={`demo-report-dot ${report.isFinalized ? 'demo-report-dot--final' : 'demo-report-dot--live'}`} />
-          <span className="demo-report-status-text">
-            {report.isFinalized
-              ? 'Finalized'
-              : isLiveMode()
-                ? 'Live model'
-                : 'Simulation'}
-          </span>
-        </div>
-        <span className="demo-report-timestamp">Updated {report.lastUpdated}</span>
-      </div>
-
       {/* Content Area */}
       <div className="demo-report-panel__content">
         {activeTab === 'briefing' && (

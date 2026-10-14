@@ -295,8 +295,8 @@ p {
   gap: 0.5rem;
   padding: 0.45rem 0.9rem;
   border-radius: 9999px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: none;
+  background: transparent;
   color: var(--ink-soft);
   font-size: 0.82rem;
   font-weight: 500;
@@ -380,6 +380,7 @@ p {
 }
 
 .demo-header__scenario-selector {
+  background: transparent;
   position: relative;
 }
 
@@ -389,15 +390,47 @@ p {
   gap: 0.6rem;
   padding: 0.45rem 1rem;
   border-radius: 9999px;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
+  border: none;
+  background: transparent;
   color: var(--ink);
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  
   transition: all 0.2s ease;
 }
+
+.demo-header__scenario-btn::after {
+  content: '';
+  display: inline-block;
+  margin-left: 0.45rem;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--ink-soft);
+  transition: transform 120ms ease;
+}
+
+.demo-header__scenario-btn[aria-expanded='true']::after {
+  transform: rotate(180deg);
+}
+
+.demo-header__back-btn:hover,
+.demo-header__scenario-btn:hover,
+.demo-report-copy-btn:hover {
+  color: var(--ink);
+  background: rgba(10, 15, 13, 0.05);
+}
+
+:root[data-theme='dark'] .demo-header__back-btn:hover,
+:root[data-theme='dark'] .demo-header__scenario-btn:hover,
+:root[data-theme='dark'] .demo-report-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.demo-report-panel__tab:hover {
+  color: var(--ink);
+}
+
 
 .demo-header__scenario-btn:hover {
   border-color: var(--brand-cyan);
@@ -502,14 +535,28 @@ p {
 }
 
 .demo-pill-btn {
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.demo-pill-btn:hover:not(:disabled) {
+  background: rgba(10, 15, 13, 0.05);
+  color: var(--ink);
+}
+
+:root[data-theme='dark'] .demo-pill-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.demo-pill-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.45rem 0.9rem;
+  padding: 0.45rem 0.7rem;
   border-radius: 9999px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink);
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -1105,6 +1152,7 @@ p {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background: var(--paper);
 }
 
 .demo-report-panel__header {
@@ -1121,10 +1169,10 @@ p {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  background: rgba(0, 0, 0, 0.04);
-  padding: 0.25rem;
+  background: transparent;
+  padding: 0;
   border-radius: 9999px;
-}
+; border: none; box-shadow: none }
 
 :root[data-theme="dark"] .demo-report-panel__tabs {
   background: rgba(255, 255, 255, 0.06);
@@ -1134,9 +1182,13 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 9999px;
+  padding: 0.35rem 0.1rem;
+  margin-right: 1rem;
+  border-radius: 0;
   border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-soft);
   background: transparent;
   color: var(--ink-soft);
   font-size: 0.78rem;
@@ -1146,9 +1198,8 @@ p {
 }
 
 .demo-report-panel__tab--active {
-  background: var(--surface-solid);
   color: var(--ink);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border-bottom-color: var(--ink);
 }
 
 .demo-report-panel__badge {
@@ -1172,29 +1223,20 @@ p {
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   border-radius: 9999px;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
+  border: none;
+  background: transparent;
   color: var(--ink-soft);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-}
+; box-shadow: none }
 
 .demo-report-copy-btn:hover {
   border-color: var(--brand-cyan);
   color: var(--ink);
 }
 
-.demo-report-panel__status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 1.25rem;
-  background: rgba(45, 106, 79, 0.05);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.72rem;
-}
 
 .demo-report-panel__status-left {
   display: flex;
@@ -1235,17 +1277,18 @@ p {
 
 .demo-report-panel__content {
   flex: 1;
+  overflow-x: clip;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 1.25rem 1.25rem 1.75rem;
 }
 
 /* Markdown Briefing Styling */
 .demo-report-briefing {
-  background: var(--surface-solid);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 1.75rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 1.25rem 1.25rem 1.75rem;
+  box-shadow: none;
 }
 
 .demo-report-prose {
@@ -1928,14 +1971,7 @@ p {
 }
 
 .demo-pill-btn--tour {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.demo-pill-btn--tour:hover {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.4);
+  color: var(--ink-soft);
 }
 
 .demo-input__chips-row {
