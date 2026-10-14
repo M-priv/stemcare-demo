@@ -338,10 +338,13 @@ export async function processPatientMessage(
       redFlagMessage,
     ];
 
+    const flagsBody = `⚠️ **EMERGENCY RED FLAG DETECTED**: ${redFlagCheck.symptom} (${redFlagCheck.urgency})\nGuidance: ${redFlagCheck.guidance}`;
+    // Upsert both sections: the preset/custom report templates already carry
+    // their own Summary, which must be replaced — not duplicated.
     const updatedReport = upsertReportSection(
-      state.report,
-      'Red Flags',
-      `⚠️ **EMERGENCY RED FLAG DETECTED**: ${redFlagCheck.symptom} (${redFlagCheck.urgency})\nGuidance: ${redFlagCheck.guidance}\n\n## Summary\nInterview terminated due to emergency red flag.`,
+      upsertReportSection(state.report, 'Red Flags', flagsBody),
+      'Summary',
+      'Interview terminated due to emergency red flag.',
     );
 
     return {
@@ -373,20 +376,28 @@ export async function processPatientMessage(
   // 3. Update Policy with User Answer
   const currentPolicy = state.interviewPolicy || createInitialInterviewPolicy();
   const lastTopic = currentPolicy.lastSelectedTopic || 'chief_complaint_onset_timeline';
+
+  // A manual wrap-up below the intake gate is refused WITHOUT mutating the
+  // interview: funneling the empty payload through the policy used to burn a
+  // turn, block the pending topic with an empty finding, and — under
+  // repetition — fabricate gate satisfaction via blockage alone. The pending
+  // question is simply re-asked.
+  const wrapUpRefused =
+    isForceWrapUp && !isIntakeGateSatisfied(computeCoverageStatus(currentPolicy, state.hasRedFlag));
+
   // 1-based transcript index of the patient message just appended — the
   // deterministic report's [[n]] citation points here.
   const answerMessageIndex = isForceWrapUp ? undefined : transcriptWithUser.length;
-  const updatedPolicy = applyUserAnswerToPolicy(currentPolicy, lastTopic, userMessage, answerMessageIndex);
+  const updatedPolicy = wrapUpRefused
+    ? currentPolicy
+    : applyUserAnswerToPolicy(currentPolicy, lastTopic, userMessage, answerMessageIndex);
 
   // 3.5 Selection, coverage, termination
   const selection = selectInterviewTopic(updatedPolicy, state.presentingComplaint, userMessage);
   const coverage = computeCoverageStatus(updatedPolicy, state.hasRedFlag);
   const termination = shouldTerminateInterview(updatedPolicy, coverage, selection);
 
-  // A manual wrap-up is honoured only once the intake gate is satisfied —
-  // the UI disables the button, and this is the defense-in-depth backstop.
-  const wrapUpAllowed = !isForceWrapUp || isIntakeGateSatisfied(coverage);
-  const shouldEnd = (isForceWrapUp && wrapUpAllowed) || termination.shouldTerminate;
+  const shouldEnd = (isForceWrapUp && !wrapUpRefused) || termination.shouldTerminate;
 
   // 5. Interviewer response — live model via server proxy when enabled,
   // deterministic policy question otherwise (and on ANY live failure).
@@ -521,39 +532,57 @@ export function buildDeterministicReport(options: {
   const indexes = policy.topicFindingIndexes || {};
   const seen = new Set<string>();
 
-  const findingEntry = (topic: InterviewTopic): string | null => {
+  const findingEntry = (topic: InterviewTopic): { text: string; marker: string } | null => {
     const text = (findings[topic] || '').trim();
     if (!text) return null;
     const key = text.toLowerCase();
     if (seen.has(key)) return null; // one fact appears exactly once
     seen.add(key);
     const index = indexes[topic];
-    return `${text}${index ? ` [[${index}]]` : ''}`;
+    return { text, marker: index ? ` [[${index}]]` : '' };
   };
 
-  const renderRow = (row: string, topics: InterviewTopic[], negationRow = false): string | null => {
-    const parts = topics
-      .map(findingEntry)
-      .filter((t): t is string => Boolean(t))
-      .map((text) => (negationRow && !isNegativeScreeningAnswer(text) ? `Reports: ${text}` : text));
+  const entryText = (e: { text: string; marker: string }): string => `${e.text}${e.marker}`;
+
+  const renderRow = (row: string, topics: InterviewTopic[]): string | null => {
+    const parts = topics.map(findingEntry).filter((e): e is NonNullable<typeof e> => Boolean(e)).map(entryText);
     if (parts.length === 0) return null;
     return `- **${row}**: ${parts.join('; ')}`;
   };
+
+  // Safety-screen answers split by polarity: denials belong under Pertinent
+  // Negatives; positive findings are symptoms and belong under Associated
+  // Symptoms — never "Reports: …" under a Negatives heading.
+  const associatedEntries: Array<{ text: string; marker: string }> = [];
+  const pertinentNegatives: string[] = [];
+  for (const topic of ['associated_symptoms_core', 'hydration_tolerance_if_gi'] as InterviewTopic[]) {
+    const e = findingEntry(topic);
+    if (e) associatedEntries.push(e);
+  }
+  for (const topic of [
+    'breathing_chest_red_flags',
+    'neuro_severe_red_flags',
+    'branch_discriminators',
+    'broad_ros_optional',
+  ] as InterviewTopic[]) {
+    const e = findingEntry(topic);
+    if (!e) continue;
+    if (isNegativeScreeningAnswer(e.text)) {
+      pertinentNegatives.push(e.text + e.marker);
+    } else {
+      associatedEntries.push(e);
+    }
+  }
 
   const hpiBullets = [
     renderRow('Onset & Duration', ['chief_complaint_onset_timeline']),
     renderRow('Severity', ['chief_complaint_severity_impact']),
     renderRow('Modifying Factors', ['progression_modifiers']),
     renderRow('Interventions Tried', ['self_care_and_response']),
-    renderRow('Associated Symptoms', ['associated_symptoms_core', 'hydration_tolerance_if_gi']),
-    // Safety-screen answers: denials read as "Denies …" naturally; any
-    // positive finding is presented as reported, not as a denial.
-    renderRow('Pertinent Negatives', [
-      'breathing_chest_red_flags',
-      'neuro_severe_red_flags',
-      'branch_discriminators',
-      'broad_ros_optional',
-    ], true),
+    associatedEntries.length > 0
+      ? `- **Associated Symptoms**: ${associatedEntries.map(entryText).join('; ')}`
+      : null,
+    pertinentNegatives.length > 0 ? `- **Pertinent Negatives**: ${pertinentNegatives.join('; ')}` : null,
   ].filter((b): b is string => Boolean(b));
 
   const historyBullets = [

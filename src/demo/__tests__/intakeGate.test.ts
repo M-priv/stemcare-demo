@@ -113,3 +113,34 @@ describe('shouldTerminateInterview honors the intake gate', () => {
     expect(decision.reason).toBe('hard_cap');
   });
 });
+
+describe('wrap-up refusal and report classification', () => {
+  it('a refused wrap-up leaves the policy untouched', async () => {
+    const { processPatientMessage } = await import('../lib/medgemmaChatService');
+    let state = (await import('../lib/medgemmaChatService')).initializeChatSession('', 'Guest Patient');
+    state = (await processPatientMessage(state, 'Persistent dry cough for a week')).state;
+    const countsBefore = JSON.stringify(state.interviewPolicy?.askedTopicCounts);
+    const blockedBefore = JSON.stringify(state.interviewPolicy?.blockedTopics);
+
+    const refused = await processPatientMessage(state, '', true);
+    expect(refused.interviewComplete).toBe(false);
+    expect(JSON.stringify(refused.state.interviewPolicy?.askedTopicCounts)).toBe(countsBefore);
+    expect(JSON.stringify(refused.state.interviewPolicy?.blockedTopics)).toBe(blockedBefore);
+  });
+
+  it('classifies screening answers by polarity', async () => {
+    const { buildDeterministicReport } = await import('../lib/medgemmaChatService');
+    const { createInitialInterviewPolicy, applyUserAnswerToPolicy } = await import('../lib/interviewPrioritization');
+    const base = { ...createInitialInterviewPolicy(), lastSelectedTopic: 'breathing_chest_red_flags' as const };
+    let policy = applyUserAnswerToPolicy(base, 'breathing_chest_red_flags', 'I do get a bit breathless climbing stairs, but no pain');
+    const positiveReport = buildDeterministicReport({ policy, complaint: 'cough', complete: false });
+    // A positive finding must NOT sit under Pertinent Negatives.
+    expect(positiveReport).toMatch(/\*\*Associated Symptoms\*\*:.*breathless climbing stairs/);
+    expect(positiveReport).not.toMatch(/\*\*Pertinent Negatives\*\*:.*Reports:/);
+
+    let policy2 = applyUserAnswerToPolicy(base, 'breathing_chest_red_flags', 'No chest pain or shortness of breath');
+    const negativeReport = buildDeterministicReport({ policy: policy2, complaint: 'cough', complete: false });
+    expect(negativeReport).toMatch(/\*\*Pertinent Negatives\*\*: No chest pain/);
+    expect(negativeReport).not.toMatch(/\*\*Associated Symptoms\*\*:.*No chest pain/);
+  });
+});

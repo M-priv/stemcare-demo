@@ -290,18 +290,21 @@ export function applyUserAnswerToPolicy(
     };
   }
 
-  // Keep the FIRST answer per topic: a re-ask must never destroy an earlier
-  // finding (that is how pertinent negatives used to vanish from the report).
+  // Findings: the first answer wins for topics answered once; a re-ask only
+  // happens when the first answer was ambiguous, and the clarification then
+  // SUPERSEDES it (keeping the ambiguous "not sure" as the documented finding
+  // would preserve exactly the wrong information).
+  const isReAsk = currentCount >= 1;
   const existingFinding = policy.topicFindings?.[topic];
   const updatedFindings = {
     ...policy.topicFindings,
-    ...(existingFinding ? {} : { [topic]: userAnswer.trim() }),
+    ...(isReAsk || !existingFinding ? { [topic]: userAnswer.trim() } : {}),
   };
 
   const existingIndex = policy.topicFindingIndexes?.[topic];
   const updatedIndexes = {
     ...policy.topicFindingIndexes,
-    ...(existingIndex || !answerMessageIndex ? {} : { [topic]: answerMessageIndex }),
+    ...(isReAsk || !existingIndex ? (answerMessageIndex ? { [topic]: answerMessageIndex } : {}) : {}),
   };
 
   const isAmbiguous = AMBIGUOUS_PATTERNS.some((p) => p.test(userAnswer));

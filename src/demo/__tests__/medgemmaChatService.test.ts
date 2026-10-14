@@ -190,3 +190,13 @@ describe('medgemmaChatService — red-flag gate', () => {
     expect(outcome.blockedReason).toBeTruthy();
   });
 });
+
+describe('medgemmaChatService — red-flag report hygiene', () => {
+  it('terminates with exactly one Summary section', async () => {
+    const state = initializeChatSession('Sore throat and fever', 'Sophie Clarke');
+    const result = await processPatientMessage(state, 'I want to kill myself');
+    const summaries = result.state.report.match(/## Summary/g) ?? [];
+    expect(summaries).toHaveLength(1);
+    expect(result.state.report).toContain('Interview terminated due to emergency red flag.');
+  });
+});
