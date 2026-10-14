@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { DifferentialHypothesis, ClinicianReviewDecision } from '../types';
+import { suggestTriage, pathwayLabel } from '../lib/triageSuggestion';
 
 interface DemoClinicianReviewProps {
   hypotheses: DifferentialHypothesis[];
@@ -21,7 +22,7 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   );
   const [actionPathway, setActionPathway] = useState<
     ClinicianReviewDecision['actionPathway']
-  >(hypotheses.length === 0 ? 'emergency_transfer' : 'same_day_gp');
+  >(hypotheses.length === 0 ? 'emergency_transfer' : suggestTriage(hypotheses[0]).pathway);
   const [clinicianNotes, setClinicianNotes] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
 
@@ -29,14 +30,14 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   React.useEffect(() => {
     if (hypotheses.length > 0 && (!selectedHypothesisId || selectedHypothesisId === 'emergency_red_flag')) {
       setSelectedHypothesisId(hypotheses[0].id);
-      setActionPathway('same_day_gp');
     } else if (hypotheses.length === 0) {
       setSelectedHypothesisId('emergency_red_flag');
-      setActionPathway('emergency_transfer');
     }
   }, [hypotheses, selectedHypothesisId]);
 
   const topHypothesis = hypotheses[0];
+  const selectedHypothesis = hypotheses.find((h) => h.id === selectedHypothesisId);
+  const triageSuggestion = suggestTriage(selectedHypothesis, false);
   const isOverridingTop = Boolean(
     selectedHypothesisId &&
     topHypothesis &&
@@ -250,6 +251,9 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
       {/* Care Pathway Disposition Selection */}
       <div className="demo-pathway-selection">
         <span className="demo-pathway-selection__label">Select Disposition & Next Action:</span>
+        <p className="demo-pathway-selection__suggestion">
+          Suggested triage: <strong>{pathwayLabel(triageSuggestion.pathway)}</strong>. {triageSuggestion.reason}
+        </p>
         <div className="demo-pathway-selection__grid">
           {[
             { id: 'same_day_gp', label: 'Same-Day Urgent GP Review', desc: 'Book priority in-person evaluation' },
@@ -264,7 +268,12 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
               className={`demo-pathway-card ${actionPathway === path.id ? 'demo-pathway-card--selected' : ''}`}
               onClick={() => setActionPathway(path.id as ClinicianReviewDecision['actionPathway'])}
             >
-              <span className="demo-pathway-card__title">{path.label}</span>
+              <span className="demo-pathway-card__title">
+                {path.label}
+                {triageSuggestion.pathway === path.id && (
+                  <span className="demo-pathway-card__suggested">Suggested</span>
+                )}
+              </span>
               <span className="demo-pathway-card__desc">{path.desc}</span>
             </button>
           ))}

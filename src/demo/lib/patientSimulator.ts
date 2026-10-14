@@ -178,7 +178,7 @@ export async function generatePatientResponse(
   } else if (qLower.includes('medical condition') || qLower.includes('condition')) {
     candidate = 'No long-term conditions that I know of.';
   } else if (qLower.includes('family') || qLower.includes('smoking') || qLower.includes('alcohol') || qLower.includes('social')) {
-    candidate = "Nothing relevant — I don't smoke, and family history is unremarkable.";
+    candidate = "Nothing relevant; I don't smoke, and family history is unremarkable.";
   } else if (qLower.includes('better or worse') || qLower.includes('constant or intermittent') || qLower.includes('make it worse')) {
     candidate = 'Movement and bright light make it worse, and it is fairly constant.';
   } else if (qLower.includes('fluids') || qLower.includes('vomit') || qLower.includes('keeping fluids')) {

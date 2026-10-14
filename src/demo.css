@@ -2579,3 +2579,29 @@ p {
     width: 100%;
   }
 }
+
+/* Suggested-triage chip on the recommended disposition card */
+.demo-pathway-card__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.demo-pathway-card__suggested {
+  flex-shrink: 0;
+  padding: 0.12rem 0.45rem;
+  border-radius: 9999px;
+  background: rgba(45, 106, 79, 0.12);
+  color: #2d6a4f;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+:root[data-theme='dark'] .demo-pathway-card__suggested {
+  background: rgba(84, 158, 128, 0.2);
+  color: #8fd0b0;
+}

@@ -233,7 +233,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
 
                       <ul className="text-xs space-y-1 mb-3 text-muted">
                         {h.keyFindings.map((finding, fIdx) => (
-                          <li key={fIdx}>• {finding}</li>
+                          <li key={fIdx}>{finding}</li>
                         ))}
                       </ul>
 
