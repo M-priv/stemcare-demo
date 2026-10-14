@@ -560,8 +560,9 @@ p {
 }
 
 .demo-header__theme-toggle {
-  width: 36px;
+  min-width: 36px;
   height: 36px;
+  padding: 0 0.8rem;
   border-radius: 9999px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -887,6 +888,13 @@ p {
   background: var(--brand-blue);
   color: #ffffff;
   border-color: transparent;
+}
+
+/* The base `p` element rule sets color: var(--ink), which overrides
+   inheritance and renders dark-on-dark inside the patient bubble. */
+.demo-msg--user .demo-msg__bubble p,
+.demo-msg--user .demo-msg__bubble .demo-msg__text {
+  color: #ffffff;
 }
 
 :root[data-theme="dark"] .demo-msg--user .demo-msg__bubble {
@@ -1246,6 +1254,32 @@ p {
   font-size: 0.85rem;
   line-height: 1.6;
   color: var(--ink);
+}
+
+/* Markdown headings inside the briefing: compact structural labels, not
+   display serif. One rhythm for the whole panel. */
+.demo-report-prose h1,
+.demo-report-prose h2,
+.demo-report-prose h3 {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--ink);
+  margin: 1.2em 0 0.4em;
+}
+
+.demo-report-prose > :first-child {
+  margin-top: 0;
+}
+
+.demo-report-prose ul {
+  margin: 0.2em 0;
+  padding-left: 1.1em;
+}
+
+.demo-report-prose li {
+  margin: 0.18em 0;
 }
 
 .demo-report-prose h3 {
@@ -2425,4 +2459,98 @@ p {
 .demo-patient-details__start:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ─── Small-screen layout (≤720px): stacked header, fluid panes ───────────── */
+
+@media (max-width: 720px) {
+  .demo-header__inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.5rem 0.75rem;
+    row-gap: 0.45rem;
+  }
+
+  .demo-header__brand-group {
+    order: 1;
+  }
+
+  .demo-header__right-group {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .demo-header__controls {
+    order: 3;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .demo-header__scenario-selector {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .demo-header__scenario-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .demo-header__scenario-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .demo-header__subtitle {
+    display: none;
+  }
+
+  .demo-header__action-pills {
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+
+  .demo-workspace {
+    height: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .demo-pane__scroll-container {
+    min-height: 0;
+  }
+
+  .demo-input__chips-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .demo-input__chips {
+    flex-wrap: nowrap;
+  }
+
+  .demo-input-card__send-btn {
+    padding: 0 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .demo-tour-card {
+    width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .demo-header__theme-toggle {
+    flex-shrink: 0;
+    min-height: 34px;
+  }
+
+  .demo-notice-banner {
+    width: 100%;
+  }
 }

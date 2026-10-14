@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { UserRound } from 'lucide-react';
 
 interface DemoPatientDetailsProps {
   onStart: (name: string, age: string, sex: string) => void;
@@ -30,9 +29,6 @@ export const DemoPatientDetails: React.FC<DemoPatientDetailsProps> = ({ onStart 
             onStart(name, age, sex);
           }}
         >
-          <div className="demo-patient-details__icon">
-            <UserRound size={26} />
-          </div>
           <h2 className="demo-patient-details__title">Before we start</h2>
           <p className="demo-patient-details__desc">
             A few details so the clinical briefing reflects you. Everything stays in

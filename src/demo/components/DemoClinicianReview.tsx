@@ -1,14 +1,4 @@
 import React, { useState } from 'react';
-import {
-  CheckCircle2,
-  AlertCircle,
-  FileCheck,
-  ArrowRight,
-  ShieldCheck,
-  Stethoscope,
-  RotateCcw,
-  AlertTriangle,
-} from 'lucide-react';
 import type { DifferentialHypothesis, ClinicianReviewDecision } from '../types';
 
 interface DemoClinicianReviewProps {
@@ -75,7 +65,6 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
         <div className="demo-review-signed__card">
           <div className="demo-review-signed__header">
             <div className="demo-review-signed__seal">
-              <ShieldCheck size={28} className="text-emerald-500" />
             </div>
             <div>
               <h3 className="demo-review-signed__title">Clinical Disposition Authorized</h3>
@@ -126,7 +115,6 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
             className="demo-review-signed__edit-btn"
             onClick={onResetReview}
           >
-            <RotateCcw size={14} />
             <span>Modify Disposition</span>
           </button>
         </div>
@@ -138,7 +126,6 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
     <div className="demo-clinician-review">
       <div className="demo-clinician-review__header">
         <div className="demo-clinician-review__title-row">
-          <Stethoscope size={18} className="text-emerald-500" />
           <h3 className="demo-clinician-review__title">Clinician Decision Support</h3>
           {!isInterviewComplete && (
             <span className="demo-clinician-review__prelim-badge">Preliminary Intake</span>
@@ -153,7 +140,6 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
       {hypotheses.length === 0 ? (
         <div className="demo-diff-empty-card my-4">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={18} className="text-rose-500" />
             <span className="font-semibold text-sm text-foreground">
               Emergency Safety Escalation Pathway
             </span>
@@ -229,7 +215,6 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
                 <div className="demo-diff-card__findings">
                   {hyp.keyFindings.map((finding, fIdx) => (
                     <div key={fIdx} className="demo-diff-card__finding-item">
-                      <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
                       <span>{finding}</span>
                     </div>
                   ))}
@@ -250,7 +235,6 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
       {isOverridingTop && (
         <div className="demo-clinician-override animate-fade-in">
           <div className="demo-clinician-override__header">
-            <AlertCircle size={15} className="text-amber-500" />
             <span>Overriding Primary Candidate: Reason Required for Audit</span>
           </div>
           <input
@@ -309,9 +293,7 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
         disabled={Boolean(isOverridingTop && !overrideReason.trim())}
         onClick={handleSign}
       >
-        <FileCheck size={16} />
         <span>Authorize Clinical Disposition</span>
-        <ArrowRight size={16} />
       </button>
     </div>
   );

@@ -1,17 +1,4 @@
 import React, { useState } from 'react';
-import {
-  FileText,
-  Copy,
-  Check,
-  Sparkles,
-  Stethoscope,
-  Activity,
-  Clock,
-  Lock,
-  AlertTriangle,
-  ArrowRight,
-  ShieldCheck,
-} from 'lucide-react';
 import type { ClinicalReportSnapshot, DifferentialHypothesis, ClinicianReviewDecision } from '../types';
 import { compileReportToMarkdown } from '../lib/medgemmaEngine';
 import { renderReportMarkdownToSafeHtml, type ReportCitationSource } from '../lib/markdown';
@@ -101,8 +88,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             className={`demo-report-panel__tab ${activeTab === 'briefing' ? 'demo-report-panel__tab--active' : ''}`}
             onClick={() => setActiveTab('briefing')}
           >
-            <FileText size={14} />
-            <span>Clinical Briefing</span>
+            <span>Briefing</span>
           </button>
 
           <button
@@ -110,8 +96,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             className={`demo-report-panel__tab ${activeTab === 'differentials' ? 'demo-report-panel__tab--active' : ''}`}
             onClick={() => setActiveTab('differentials')}
           >
-            <Activity size={14} />
-            <span>Differential Dx</span>
+            <span>Differentials</span>
             {hasDifferentials ? (
               <span className="demo-report-panel__badge">{hypotheses.length}</span>
             ) : isInterviewComplete ? (
@@ -124,12 +109,9 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             className={`demo-report-panel__tab ${activeTab === 'review' ? 'demo-report-panel__tab--active' : ''}`}
             onClick={() => setActiveTab('review')}
           >
-            <Stethoscope size={14} />
-            <span>Clinician Gate</span>
+            <span>Review</span>
             {existingReview ? (
               <span className="demo-report-panel__dot--success" />
-            ) : !isInterviewComplete ? (
-              <Lock size={11} className="text-muted ml-0.5" />
             ) : null}
           </button>
         </div>
@@ -142,7 +124,6 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             title="Copy structured briefing as markdown"
             aria-label="Copy markdown"
           >
-            {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
             <span className="hidden-mobile">{copied ? 'Copied' : 'Copy'}</span>
           </button>
         </div>
@@ -154,10 +135,10 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           <span className={`demo-report-dot ${report.isFinalized ? 'demo-report-dot--final' : 'demo-report-dot--live'}`} />
           <span className="demo-report-status-text">
             {report.isFinalized
-              ? 'Clinical Intake Finalized'
+              ? 'Finalized'
               : isLiveMode()
-                ? 'Live Dual-Persona Synthesis Active'
-                : 'Local Structured Synthesis Active'}
+                ? 'Live model'
+                : 'Simulation'}
           </span>
         </div>
         <span className="demo-report-timestamp">Updated {report.lastUpdated}</span>
@@ -191,8 +172,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                   className="demo-pill-btn demo-pill-btn--primary"
                   onClick={onConcludeEarly}
                 >
-                  <Sparkles size={13} />
-                  <span>Conclude Intake & Generate Differentials</span>
+                  <span>Generate differentials</span>
                 </button>
               </div>
             )}
@@ -203,9 +183,6 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           <div className="demo-report-differentials animate-fade-in">
             {isRedFlagBlocked ? (
               <div className="demo-diff-empty-state">
-                <div className="demo-diff-empty-state__icon demo-diff-empty-state__icon--danger">
-                  <AlertTriangle size={24} className="text-rose-500" />
-                </div>
                 <h4 className="font-semibold text-sm text-foreground">
                   Differential Generation Blocked
                 </h4>
@@ -218,11 +195,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
               </div>
             ) : isSynthesizingHypotheses ? (
               <div className="demo-diff-empty-state">
-                <div className="demo-diff-empty-state__icon animate-spin">
-                  <Activity size={24} className="text-emerald-500" />
-                </div>
                 <h4 className="font-semibold text-sm text-foreground">
-                  Compiling Illustrative Differential Hypotheses...
+                  Compiling differential hypotheses
                 </h4>
                 <p className="text-xs text-muted max-w-sm mt-1">
                   Ranking candidate hypotheses from the finalized pre-consultation report for clinician review. Demo content — not diagnostic output.
@@ -230,11 +204,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
               </div>
             ) : !isInterviewComplete && !hasDifferentials ? (
               <div className="demo-diff-empty-state">
-                <div className="demo-diff-empty-state__icon">
-                  <Clock size={24} className="text-muted" />
-                </div>
                 <h4 className="font-semibold text-sm text-foreground">
-                  Awaiting Pre-Consultation Completion
+                  Interview in progress
                 </h4>
                 <p className="text-xs text-muted max-w-sm mt-1">
                   MedGemma is actively gathering symptom progression and pertinent negatives. Differential hypotheses generate automatically once the interview is concluded.
@@ -245,17 +216,15 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                     className="demo-pill-btn demo-pill-btn--primary mt-4"
                     onClick={onConcludeEarly}
                   >
-                    <Sparkles size={13} />
-                    <span>Conclude Intake Now</span>
+                    <span>Conclude now</span>
                   </button>
                 )}
               </div>
             ) : (
               <>
                 <div className="demo-report-diff-intro">
-                  <Sparkles size={16} className="text-emerald-500 shrink-0" />
                   <div>
-                    <h4 className="font-semibold text-sm">Differential Hypotheses (Illustrative)</h4>
+                    <h4 className="font-semibold text-sm">Differential hypotheses (illustrative)</h4>
                     <p className="text-xs text-muted">
                       Guideline-referenced candidates ranked for clinician review. Demo content only — not diagnoses and not medical advice.
                     </p>
@@ -302,8 +271,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                   className="demo-switch-tab-btn mt-6"
                   onClick={() => setActiveTab('review')}
                 >
-                  <span>Proceed to Clinician Sign-Off</span>
-                  <Stethoscope size={14} />
+                  <span>Proceed to sign-off</span>
                 </button>
               </>
             )}
@@ -314,11 +282,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           <div className="demo-report-review animate-fade-in">
             {!isInterviewComplete && !hasDifferentials ? (
               <div className="demo-diff-empty-state">
-                <div className="demo-diff-empty-state__icon">
-                  <Lock size={24} className="text-muted" />
-                </div>
                 <h4 className="font-semibold text-sm text-foreground">
-                  Clinician Gate Locked
+                  Sign-off unlocks after the interview
                 </h4>
                 <p className="text-xs text-muted max-w-sm mt-1">
                   Medical authority and care pathway authorization require a finalized pre-consultation briefing and differential synthesis.
@@ -329,8 +294,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                     className="demo-pill-btn demo-pill-btn--primary mt-4"
                     onClick={onConcludeEarly}
                   >
-                    <Sparkles size={13} />
-                    <span>Conclude Intake to Unlock</span>
+                    <span>Conclude to unlock</span>
                   </button>
                 )}
               </div>

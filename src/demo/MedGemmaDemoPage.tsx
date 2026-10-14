@@ -178,7 +178,11 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
     const initialComplaintText = getInitialComplaint(condition) || scenario.initialComplaint;
     const simConfig = createSimulation(condition);
 
-    const newSession = initializeChatSession(initialComplaintText, scenario.patientProfile.name);
+    const newSession = initializeChatSession(
+      initialComplaintText,
+      scenario.patientProfile.name,
+      `${scenario.patientProfile.age} yo ${scenario.patientProfile.gender}`,
+    );
     const initialSnapshot = createInitialReport(scenario.patientProfile.name, initialComplaintText);
     initialSnapshot.ageGender = `${scenario.patientProfile.age} yo ${scenario.patientProfile.gender}`;
     initialSnapshot.pastHistoryAndMeds = [
@@ -350,6 +354,13 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
 
     try {
       const activeState = chatStateRef.current;
+      // Show the patient's message immediately; the engine response replaces
+      // this optimistic state with the reconciled transcript.
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setChatState({
+        ...activeState,
+        messages: [...activeState.messages, { role: 'user', content: text.trim(), timestamp: now }],
+      });
       const processResult = await processPatientMessage(activeState, text.trim());
       if (epochRef.current !== epoch) return; // session changed mid-turn
 
@@ -467,10 +478,9 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
       <div className="demo-notice-banner" role="note">
         {liveMode ? (
           <span>
-            <strong>Interactive demo with a live AI model</strong> — not medical advice and not a real
-            clinical service. Text you type is sent to our server and processed by Google's Gemini to
-            generate responses. Please don't enter real personal or health information. In a real
-            emergency, call 999.
+            <strong>Live model demo.</strong> Not medical advice. Text you type is sent to our server
+            and processed by Google's Gemini. Do not enter real personal or health information.
+            In an emergency, call 999.
           </span>
         ) : (
           <span>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { ArrowUp, Shield, Sparkles } from 'lucide-react';
 
 interface DemoChatInputProps {
   onSendMessage: (message: string) => void;
@@ -45,8 +44,7 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
     return (
       <div className="demo-input-concluded">
         <div className="demo-input-concluded__content">
-          <Shield size={16} className="text-emerald-500" />
-          <span>Pre-consultation intake concluded. Review the generated briefing and differential hypotheses on the right.</span>
+          <span>Interview concluded. The briefing and differentials are ready for review.</span>
         </div>
       </div>
     );
@@ -80,8 +78,7 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
             disabled={disabled || !canConclude}
             title={canConclude ? 'Conclude pre-consultation interview and generate differential diagnoses' : concludeHint}
           >
-            <Sparkles size={12} className="text-emerald-500" />
-            <span>Wrap-Up Intake</span>
+            <span>Wrap up</span>
           </button>
         )}
       </div>
@@ -107,14 +104,10 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
           onClick={handleSend}
           aria-label="Send message"
         >
-          <ArrowUp size={16} />
+          Send
         </button>
       </div>
 
-      <div className="demo-input-footer">
-        <Shield size={12} className="text-muted" />
-        <span>AI proposes. Policy gates. Licensed clinicians make final care decisions.</span>
-      </div>
     </div>
   );
 };
