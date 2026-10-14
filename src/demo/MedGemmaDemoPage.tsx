@@ -27,9 +27,15 @@ import { generateDifferentialHypotheses } from './lib/differentials';
 import { createInitialReport } from './lib/medgemmaEngine';
 import { isLiveMode } from './lib/demoApi';
 import type { ReportCitationSource } from './lib/markdown';
+import {
+  computeCoverageStatus,
+  createInitialInterviewPolicy,
+  isIntakeGateSatisfied,
+} from './lib/interviewPrioritization';
 import { DemoHeader } from './components/DemoHeader';
 import { DemoChatArea } from './components/DemoChatArea';
 import { DemoChatInput } from './components/DemoChatInput';
+import { DemoPatientDetails } from './components/DemoPatientDetails';
 import { DemoReportPanel } from './components/DemoReportPanel';
 import { DemoTourModal } from './components/DemoTourModal';
 
@@ -78,6 +84,9 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   const [clinicianReview, setClinicianReview] = useState<ClinicianReviewDecision | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'report' | 'review'>('chat');
   const [isTourOpen, setIsTourOpen] = useState(false);
+  // Custom Case waits for the patient to enter name/age/sex before the
+  // interview starts, so the report no longer claims a fictional identity.
+  const [awaitingPatientDetails, setAwaitingPatientDetails] = useState(false);
 
   const isAutoPlayingRef = useRef(false);
   isAutoPlayingRef.current = isAutoPlaying;
@@ -149,14 +158,11 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
     setIsSynthesizingHypotheses(false);
 
     if (scenarioId === 'custom') {
-      // Fresh Start: Clean slate with canonical NHS greeting
-      const newSession = initializeChatSession('', 'Guest Patient');
-      const blankSnapshot = createInitialReport('Guest Patient', '');
-      setChatState(newSession);
-      setSimulationConfig(null);
-      setReportSnapshot(blankSnapshot);
+      // Fresh Start: hold the session until the patient enters their details.
+      setAwaitingPatientDetails(true);
       return;
     }
+    setAwaitingPatientDetails(false);
 
     // Benchmark Scenario driven by STEMCare Patient Simulator
     const scenario = DEMO_SCENARIOS.find((s) => s.id === scenarioId);
@@ -178,6 +184,34 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
     setChatState(newSession);
     setSimulationConfig(simConfig);
     setReportSnapshot(initialSnapshot);
+  }, []);
+
+  // Start the Custom Case interview with the patient's real details; blanks
+  // stay honest ("not provided") instead of falling back to a fictional identity.
+  const startCustomWithDetails = useCallback((name: string, age: string, sex: string) => {
+    epochRef.current += 1;
+    isBusyRef.current = false;
+    clearTimer();
+    setIsStreaming(false);
+    setIsAutoPlaying(false);
+    setIsInterviewComplete(false);
+    setClinicianReview(null);
+    setHypotheses([]);
+    setBlockedReason(undefined);
+    setIsSynthesizingHypotheses(false);
+
+    const patientName = name.trim() || 'Name not provided';
+    const ageGender = [age.trim() ? `${age.trim()} yo` : '', sex.trim()]
+      .filter(Boolean)
+      .join(' ') || 'Age/sex not provided';
+
+    const newSession = initializeChatSession('', patientName);
+    const blankSnapshot = createInitialReport(patientName, '');
+    blankSnapshot.ageGender = ageGender;
+    setChatState(newSession);
+    setSimulationConfig(null);
+    setReportSnapshot(blankSnapshot);
+    setAwaitingPatientDetails(false);
   }, []);
 
   // Run on mount
@@ -359,7 +393,19 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   });
 
   const userMessageCount = chatState.messages.filter((m) => m.role === 'user').length;
-  const canConcludeEarly = !isInterviewComplete && userMessageCount >= 2;
+
+  // Wrap-Up is only offered once the intake gate is satisfied: HPI core
+  // (onset, severity, modifiers) plus the full history block. Without this
+  // the GP report would ship "Not yet discussed" rows for its core sections.
+  const intakeCoverage = computeCoverageStatus(
+    chatState.interviewPolicy ?? createInitialInterviewPolicy(),
+    chatState.hasRedFlag,
+  );
+  const intakeGateSatisfied = isIntakeGateSatisfied(intakeCoverage);
+  const canConcludeEarly = !isInterviewComplete && userMessageCount >= 2 && intakeGateSatisfied;
+  const concludeHint = intakeGateSatisfied
+    ? undefined
+    : 'A few intake questions remain (history, medications, allergies) before the interview can be concluded.';
 
   // Provenance sources for live-report citations: each transcript line, 1-based.
   const citationSources: ReportCitationSource[] = chatState.messages.map((m, i) => ({
@@ -436,20 +482,25 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
           aria-label="Patient consultation chat"
         >
           <div className="demo-pane__scroll-container">
-            <DemoChatArea
-              messages={uiMessages}
-              isStreaming={isStreaming}
-              onSelectScenario={handleSelectScenario}
-            />
+            {awaitingPatientDetails ? (
+              <DemoPatientDetails onStart={startCustomWithDetails} />
+            ) : (
+              <DemoChatArea
+                messages={uiMessages}
+                isStreaming={isStreaming}
+                onSelectScenario={handleSelectScenario}
+              />
+            )}
           </div>
 
           <div className="demo-pane__input-container">
             <DemoChatInput
               onSendMessage={handleUserSendMessage}
-              disabled={isStreaming}
+              disabled={isStreaming || awaitingPatientDetails}
               isInterviewComplete={isInterviewComplete}
               suggestedChips={currentTurnChips}
               canConclude={canConcludeEarly}
+              concludeHint={concludeHint}
               onConcludeInterview={handleConcludeEarly}
             />
           </div>

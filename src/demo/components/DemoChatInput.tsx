@@ -7,6 +7,8 @@ interface DemoChatInputProps {
   isInterviewComplete: boolean;
   suggestedChips?: string[];
   canConclude?: boolean;
+  /** Shown (button disabled) when the intake gate blocks an early wrap-up. */
+  concludeHint?: string;
   onConcludeInterview?: () => void;
 }
 
@@ -16,6 +18,7 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
   isInterviewComplete,
   suggestedChips,
   canConclude = false,
+  concludeHint,
   onConcludeInterview,
 }) => {
   const [text, setText] = useState('');
@@ -69,13 +72,13 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
           </div>
         )}
 
-        {canConclude && onConcludeInterview && (
+        {(canConclude || concludeHint) && onConcludeInterview && (
           <button
             type="button"
             className="demo-conclude-pill-btn"
             onClick={onConcludeInterview}
-            disabled={disabled}
-            title="Conclude pre-consultation interview and generate differential diagnoses"
+            disabled={disabled || !canConclude}
+            title={canConclude ? 'Conclude pre-consultation interview and generate differential diagnoses' : concludeHint}
           >
             <Sparkles size={12} className="text-emerald-500" />
             <span>Wrap-Up Intake</span>

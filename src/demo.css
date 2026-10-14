@@ -2320,3 +2320,107 @@ p {
   animation: demoMsgFlash 1.8s ease-out 1;
   border-radius: 12px;
 }
+
+/* ─── Custom Case patient details (pre-interview form) ─────────────────────── */
+
+.demo-patient-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 1.6rem 1.5rem;
+  border-radius: 18px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+.demo-patient-details__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(47, 111, 111, 0.12);
+  color: #2f6f6f;
+}
+
+.demo-patient-details__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.demo-patient-details__desc {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+.demo-patient-details__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.demo-patient-details__field span {
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.demo-patient-details__field input,
+.demo-patient-details__field select {
+  min-height: 42px;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+}
+
+.demo-patient-details__field input[aria-invalid='true'] {
+  border-color: #c0392b;
+}
+
+.demo-patient-details__row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.demo-patient-details__error {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #c0392b;
+}
+
+.demo-patient-details__start {
+  min-height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: #2f6f6f;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.demo-patient-details__start:hover:not(:disabled) {
+  background: #245555;
+}
+
+.demo-patient-details__start:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

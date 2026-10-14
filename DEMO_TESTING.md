@@ -109,11 +109,17 @@ expected result**.
 6. **Override enforcement** — Select a non-primary hypothesis → a reason is
    REQUIRED before "Authorize" enables (mirrors production
    reject-requires-notes).
-7. **Custom case** — Switch to "Fresh Start (Custom Case)" → type any
-   symptom narrative → interview asks varied, non-repeated questions and
-   terminates within ~15 questions; briefing Chief Complaint stays fixed on
-   the FIRST message and does not drift to later messages.
-8. **Wrap-Up Intake** — After 2+ answers → click "Wrap-Up Intake" → no blank
+7. **Custom case** — Switch to "Fresh Start (Custom Case)" → a details card
+   asks for name, age, and sex (all optional; blanks render as "not
+   provided" in the report rather than a fictional identity) → start the
+   interview → type any symptom narrative → interview asks varied,
+   non-repeated questions, always covers onset, severity, modifiers, past
+   conditions, medications, allergies, and family/social history before it
+   may end, and terminates within ~15 questions; briefing Chief Complaint
+   stays fixed on the FIRST message and does not drift to later messages.
+8. **Wrap-Up Intake** — "Wrap-Up Intake" appears after 2+ answers but stays
+   disabled (with an explanatory tooltip) until the history block and HPI
+   core have been asked. After the gate is satisfied → click it → no blank
    patient bubble appears; interview concludes; differentials generate.
 9. **999 red flag** — Type "I want to kill myself" → interview halts
    immediately, 999 + Samaritans (116 123) guidance shown, differentials tab

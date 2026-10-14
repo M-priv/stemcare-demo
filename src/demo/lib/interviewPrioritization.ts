@@ -119,6 +119,10 @@ export interface CoverageStatus {
   coreRedFlagScreen: boolean;
   selfCareResponse: boolean;
   historyBundle: boolean;
+  /** Every history topic (PMH, meds, allergies, family/social) asked or blocked. */
+  historyComplete: boolean;
+  /** Onset, severity, and progression/modifiers asked or blocked. */
+  hpiCoreComplete: boolean;
   highYieldComplete: boolean;
 }
 
@@ -305,8 +309,13 @@ export function computeCoverageStatus(
     (asked.pmh ?? 0) > 0 || blocked.has('pmh'),
     (asked.regular_meds ?? 0) > 0 || blocked.has('regular_meds'),
     (asked.allergies ?? 0) > 0 || blocked.has('allergies'),
+    (asked.family_social ?? 0) > 0 || blocked.has('family_social'),
   ];
   const historyBundle = historyItems.some(Boolean);
+  const historyComplete = historyItems.every(Boolean);
+
+  const hpiCoreComplete =
+    onsetTimeline && severityImpact && ((asked.progression_modifiers ?? 0) > 0 || blocked.has('progression_modifiers'));
 
   return {
     chiefComplaintCharacterization,
@@ -314,11 +323,24 @@ export function computeCoverageStatus(
     coreRedFlagScreen,
     selfCareResponse,
     historyBundle,
+    historyComplete,
+    hpiCoreComplete,
     highYieldComplete:
       chiefComplaintCharacterization &&
       associatedSymptoms &&
       coreRedFlagScreen,
   };
+}
+
+/**
+ * True when the interview has covered everything the GP-facing report
+ * promises: the HPI core (onset, severity, modifiers) and the full history
+ * block (PMH, meds, allergies, family/social). Until this is true, neither
+ * the adaptive termination logic nor the manual Wrap-Up control may end the
+ * interview (the red-flag gate and the hard question cap always can).
+ */
+export function isIntakeGateSatisfied(coverage: CoverageStatus): boolean {
+  return coverage.historyComplete && coverage.hpiCoreComplete;
 }
 
 export function shouldTerminateInterview(
@@ -338,6 +360,14 @@ export function shouldTerminateInterview(
   }
 
   if (policy.questionsAsked < minQuestions) {
+    return { shouldTerminate: false };
+  }
+
+  // The intake gate (history block + HPI core) outranks every soft
+  // termination path: without it the GP report would ship "Not yet
+  // discussed" rows for information a PCP needs. Only the hard cap above
+  // (and the red-flag gate, handled upstream) can end an interview early.
+  if (!isIntakeGateSatisfied(coverage)) {
     return { shouldTerminate: false };
   }
 
