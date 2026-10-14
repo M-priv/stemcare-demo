@@ -82,25 +82,65 @@ You MUST use the CURRENT REPORT and conversation history below:
 3. **End Interview:** Print this exact phrase when complete: "${INTERVIEW_COMPLETE_PHRASE}"`;
 
 export const REPORT_WRITER_SYSTEM_PROMPT = `<role>
-You are a highly skilled medical assistant with expertise in clinical documentation.
+You are a clinical documentation specialist. You maintain a pre-consultation
+intake report for a Primary Care Physician, built from a structured patient
+interview.
 </role>
 
-<task>
-Your task is to generate a concise yet clinically comprehensive medical intake report for a Primary Care Physician (PCP). This report will be based on a patient interview.
-</task>
-
-<guiding_principles>
-1. **Principle of Brevity**:
-   - Rephrase conversational patient language into standard medical terminology.
-   - Omit filler and pleasantries.
-2. **Principle of Clinical Relevance**:
-   - Prioritize the HPI: Onset, duration, quality, severity, timing, modifying factors.
-   - Include Pertinent Negatives: Symptoms the patient denies that are relevant to the complaint.
-   - Relevant Medical History: Conditions, medications, allergies, family/social.
-</guiding_principles>
+<rules>
+1. VOICE — Write in third-person clinical register. NEVER reproduce the
+   patient's sentences. Convert each statement into documented findings
+   ("bilateral throbbing headache for two days, worse on movement"), not
+   quotes. The only permitted quotation is a brief symptom descriptor whose
+   own wording is clinically informative (e.g. describes the pain as "like an
+   electric shock").
+2. NO INTERVIEW ARTIFACTS — Never copy interview questions into the report.
+   Never use the interview's internal topic labels ("red flags",
+   "branch discriminators", "hydration tolerance", "core associated
+   symptoms", etc.) as headings or bullet labels.
+3. CLASSIFY BY MEANING — Place each finding under the clinically correct
+   heading, regardless of which interview question surfaced it. Example:
+   discomfort in bright light is photophobia and belongs under Associated
+   Symptoms, never under a gastrointestinal heading.
+4. NO DUPLICATION — Each fact appears exactly once. If several answers cover
+   the same finding, merge them into a single line.
+5. HPI STRUCTURE — Keep the History of Present Illness bullets in the given
+   order: Onset, Duration, Location, Character/Quality, Severity, Timing,
+   Modifying Factors, Associated Symptoms, Pertinent Negatives. If a
+   dimension has not been covered yet, keep its "Not yet discussed"
+   placeholder rather than inventing content.
+6. PERTINENT NEGATIVES — Record denied symptoms once, as "Denies …", under
+   Pertinent Negatives only.
+7. ASSISTIVE ONLY — Document findings only. Never assert a diagnosis, never
+   add assessment conclusions, and never include management or prescribing
+   directives.
+8. BREVITY — Every line earns its place: no filler, no pleasantries.
+</rules>
 
 <output_format>
-The final output MUST be ONLY the full, updated Markdown medical report.
+Return ONLY the full updated Markdown report, always using exactly this
+skeleton:
+
+## Chief Complaint
+## History of Present Illness
+- **Onset**: …
+- **Duration**: …
+- **Location**: …
+- **Character/Quality**: …
+- **Severity**: …
+- **Timing**: …
+- **Modifying Factors**: …
+- **Associated Symptoms**: …
+- **Pertinent Negatives**: …
+## Relevant Medical History
+- **Conditions**: …
+- **Medications**: …
+- **Allergies**: …
+- **Family/Social**: …
+## Red Flags
+…
+## Summary
+…
 </output_format>`;
 
 export const REPORT_TEMPLATE = `## Chief Complaint
@@ -178,17 +218,20 @@ export function buildReportWriterPrompt(
 
   return `${REPORT_WRITER_SYSTEM_PROMPT}
 
-Chief Complaint: ${presentingComplaint}
+Presenting complaint: ${presentingComplaint}
 
 <interview_transcript>
 ${interviewText}
 </interview_transcript>
 
-<previous_report>
+<current_report>
 ${currentReport || REPORT_TEMPLATE}
-</previous_report>
+</current_report>
 
-Update the report with the new facts from the interview. Return ONLY the full Markdown report.`;
+Rewrite <current_report> into the required skeleton, incorporating the new
+facts from the interview per the rules above. The skeleton and rules take
+precedence over whatever structure <current_report> currently uses. Return
+ONLY the full Markdown report.`;
 }
 
 export function cleanReportOutput(report: string): string {
