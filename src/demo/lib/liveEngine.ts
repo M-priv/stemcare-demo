@@ -26,7 +26,7 @@ import {
   cleanReportOutput,
 } from './medgemmaChatService';
 import { buildPatientPrompt } from './patientSimulator';
-import { buildHypothesisPrompt } from './differentials';
+import { buildHypothesisPrompt, HYPOTHESIS_SYSTEM_PROMPT } from './differentials';
 import {
   evaluateAssistiveOnlyGuardrails,
   buildAssistiveOnlyAbstainNote,
@@ -195,34 +195,67 @@ async function callGemini(
   opts: { apiKey: string; model: string },
   generationConfig: { temperature: number; maxOutputTokens: number },
 ): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': opts.apiKey,
+  // Up to two retries for transient upstream failures (Google 503
+  // high-demand / 429 rate limit). These come back in ~1s and gemini lite
+  // models shed load intermittently, so a couple of spaced attempts usually
+  // gets through. Anything else fails through on first attempt.
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 900;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let retryable = false;
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': opts.apiKey,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig,
+          }),
+          signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
         },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig,
-        }),
-        signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
-      },
-    );
+      );
 
-    if (!response.ok) return null;
+      if (!response.ok) {
+        // Diagnostic: surface the upstream failure in server logs (Vercel
+        // function logs in production) instead of failing silently.
+        console.error(`[demo-live] ${opts.model} HTTP ${response.status}:`, (await response.text()).slice(0, 400));
+        retryable = response.status === 503 || response.status === 429;
+      } else {
+        const data = (await response.json()) as {
+          candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
+          usageMetadata?: unknown;
+        };
+        const parts = data.candidates?.[0]?.content?.parts ?? [];
+        const text = parts.map((p) => p?.text ?? '').join('').trim();
+        if (!text) {
+          console.error(
+            '[demo-live] empty model response:',
+            JSON.stringify({
+              finishReason: data.candidates?.[0]?.finishReason,
+              parts: parts.length,
+              usage: data.usageMetadata,
+            }).slice(0, 400),
+          );
+        }
+        return text || null;
+      }
+    } catch {
+      retryable = true; // network error or timeout — worth one more try
+    }
 
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const parts = data.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.map((p) => p?.text ?? '').join('').trim();
-    return text || null;
-  } catch {
-    return null;
+    if (retryable && attempt < MAX_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    } else {
+      return null;
+    }
   }
+  return null;
 }
 
 const fallbackResponse = (status: number, reason: string): DemoApiResponse => ({
@@ -330,26 +363,37 @@ async function runDifferentials(body: DemoApiRequest, opts: { apiKey: string; mo
   const reportMarkdown = asString(body.reportMarkdown, MAX_REPORT_CHARS);
   if (!reportMarkdown) return fallbackResponse(400, 'invalid_payload');
 
-  const prompt = buildHypothesisPrompt(reportMarkdown);
+  // The JSON schema lives in HYPOTHESIS_SYSTEM_PROMPT; without it the model
+  // invents its own key names ("differential_hypotheses"/"diagnosis") and the
+  // strict parser below rejects every card.
+  const prompt = `${HYPOTHESIS_SYSTEM_PROMPT}\n\n${buildHypothesisPrompt(reportMarkdown)}`;
   const text = await callGemini(prompt, opts, { temperature: 0.25, maxOutputTokens: 1024 });
   if (!text) return fallbackResponse(502, 'model_unavailable');
 
+  const stripped = text.trim().replace(/^```(?:json)?\n?/i, '').replace(/```\s*$/i, '').trim();
   let parsed: unknown;
   try {
-    const stripped = text.trim().replace(/^```(?:json)?\n?/i, '').replace(/```\s*$/i, '').trim();
     parsed = JSON.parse(stripped);
   } catch {
+    console.error('[demo-live] differentials: unparseable JSON:', stripped.slice(0, 400));
     return fallbackResponse(200, 'unparseable_json');
   }
 
-  const rawHypotheses = (parsed as { hypotheses?: unknown })?.hypotheses;
+  // Tolerate model drift on container/item key names; the canonical shape is
+  // { hypotheses: [{ label, rationale, confidence_bucket, ... }] }.
+  const parsedObj = parsed as { hypotheses?: unknown; differential_hypotheses?: unknown };
+  const rawHypotheses = Array.isArray(parsedObj.hypotheses)
+    ? parsedObj.hypotheses
+    : parsedObj.differential_hypotheses;
   if (!Array.isArray(rawHypotheses) || rawHypotheses.length === 0) {
+    console.error('[demo-live] differentials: unexpected JSON shape:', stripped.slice(0, 400));
     return fallbackResponse(200, 'invalid_hypotheses');
   }
 
   const hypotheses: DifferentialHypothesis[] = [];
   rawHypotheses.slice(0, 3).forEach((raw, idx) => {
-    const label = asString((raw as { label?: unknown })?.label, 120);
+    const rawItem = raw as { label?: unknown; diagnosis?: unknown };
+    const label = asString(rawItem.label ?? rawItem.diagnosis, 120);
     const rationale = asString((raw as { rationale?: unknown })?.rationale, 400);
     if (!label) return;
 
