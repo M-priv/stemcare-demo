@@ -171,6 +171,18 @@ export async function generatePatientResponse(
   } else if (qLower.includes('travel') || qLower.includes('country') || qLower.includes('abroad')) {
     const travelSymptom = config.selectedSymptoms.find((s) => s.includes('Tanzania') || s.includes('trip'));
     candidate = travelSymptom || 'No recent overseas travel, just stayed locally.';
+  } else if (qLower.includes('allerg')) {
+    // Must precede the medication branch: the allergy screen mentions
+    // "medication allergies" and used to return the paracetamol line.
+    candidate = "No, I don't have any allergies to medications that I know of.";
+  } else if (qLower.includes('medical condition') || qLower.includes('condition')) {
+    candidate = 'No long-term conditions that I know of.';
+  } else if (qLower.includes('family') || qLower.includes('smoking') || qLower.includes('alcohol') || qLower.includes('social')) {
+    candidate = "Nothing relevant — I don't smoke, and family history is unremarkable.";
+  } else if (qLower.includes('better or worse') || qLower.includes('constant or intermittent') || qLower.includes('make it worse')) {
+    candidate = 'Movement and bright light make it worse, and it is fairly constant.';
+  } else if (qLower.includes('fluids') || qLower.includes('vomit') || qLower.includes('keeping fluids')) {
+    candidate = 'Yes, I am keeping fluids down without a problem.';
   } else if (qLower.includes('medication') || qLower.includes('drug') || qLower.includes('tablet') || qLower.includes('took')) {
     const medSymptom = config.selectedSymptoms.find((s) => s.includes('SSRI') || s.includes('cough syrup') || s.includes('Ibuprofen'));
     candidate = medSymptom || 'I took some paracetamol earlier today, but it didn’t make much difference.';

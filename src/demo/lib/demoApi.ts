@@ -70,11 +70,15 @@ export async function requestReportUpdate(request: {
   transcript: MedGemmaChatMessage[];
   currentReport: string;
   complaint: string;
+  patientName?: string;
+  patientMeta?: string;
 }): Promise<string | null> {
   const data = await callDemoApi<{ text?: string }>('report_writer', {
     transcript: request.transcript.map((m) => ({ role: m.role, content: m.content })),
     currentReport: request.currentReport,
     complaint: request.complaint,
+    patientName: request.patientName,
+    patientMeta: request.patientMeta,
   });
   return data?.text ?? null;
 }

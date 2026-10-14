@@ -158,8 +158,14 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
     setIsSynthesizingHypotheses(false);
 
     if (scenarioId === 'custom') {
-      // Fresh Start: hold the session until the patient enters their details.
+      // Fresh Start: hold the session until the patient enters their details,
+      // and clear any previous scenario's report from the right pane.
       setAwaitingPatientDetails(true);
+      const placeholderName = 'Name not provided';
+      setChatState(initializeChatSession('', placeholderName, 'Age/sex not provided'));
+      const blankSnapshot = createInitialReport(placeholderName, '');
+      blankSnapshot.ageGender = 'Age/sex not provided';
+      setReportSnapshot(blankSnapshot);
       return;
     }
     setAwaitingPatientDetails(false);
@@ -201,13 +207,13 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
     setIsSynthesizingHypotheses(false);
 
     const patientName = name.trim() || 'Name not provided';
-    const ageGender = [age.trim() ? `${age.trim()} yo` : '', sex.trim()]
+    const patientMeta = [age.trim() ? `${age.trim()} yo` : '', sex.trim()]
       .filter(Boolean)
       .join(' ') || 'Age/sex not provided';
 
-    const newSession = initializeChatSession('', patientName);
+    const newSession = initializeChatSession('', patientName, patientMeta);
     const blankSnapshot = createInitialReport(patientName, '');
-    blankSnapshot.ageGender = ageGender;
+    blankSnapshot.ageGender = patientMeta;
     setChatState(newSession);
     setSimulationConfig(null);
     setReportSnapshot(blankSnapshot);
@@ -291,6 +297,13 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   // Handle early conclusion requested by user
   const handleConcludeEarly = async () => {
     if (isBusyRef.current || isInterviewComplete || isStreaming) return;
+    // Defense-in-depth: the buttons are gated by canConcludeEarly; re-check
+    // the intake gate here so no future caller can bypass it.
+    const gateCoverage = computeCoverageStatus(
+      chatStateRef.current.interviewPolicy ?? createInitialInterviewPolicy(),
+      chatStateRef.current.hasRedFlag,
+    );
+    if (!isIntakeGateSatisfied(gateCoverage)) return;
     const epoch = epochRef.current;
 
     clearTimer();
@@ -405,14 +418,24 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   const canConcludeEarly = !isInterviewComplete && userMessageCount >= 2 && intakeGateSatisfied;
   const concludeHint = intakeGateSatisfied
     ? undefined
-    : 'A few intake questions remain (history, medications, allergies) before the interview can be concluded.';
+    : !intakeCoverage.hpiCoreComplete
+      ? 'The core history is still being taken (onset, severity, modifiers) before the interview can be concluded.'
+      : !intakeCoverage.historyComplete
+        ? 'A few intake questions remain (past conditions, medications, allergies, family/social history) before the interview can be concluded.'
+        : 'A few intake questions remain before the interview can be concluded.';
 
-  // Provenance sources for live-report citations: each transcript line, 1-based.
-  const citationSources: ReportCitationSource[] = chatState.messages.map((m, i) => ({
-    index: i + 1,
-    quote: m.content,
-    isPatient: m.role === 'user',
-  }));
+  // Provenance sources for report citations: each transcript line, 1-based.
+  // Memoised so the report's marked+DOMPurify render only re-runs when the
+  // transcript actually changes.
+  const citationSources: ReportCitationSource[] = React.useMemo(
+    () =>
+      chatState.messages.map((m, i) => ({
+        index: i + 1,
+        quote: m.content,
+        isPatient: m.role === 'user',
+      })),
+    [chatState.messages],
+  );
 
   // A citation click jumps to the source message and flashes it.
   const handleCitationClick = useCallback((transcriptIndex: number) => {
@@ -483,7 +506,7 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
         >
           <div className="demo-pane__scroll-container">
             {awaitingPatientDetails ? (
-              <DemoPatientDetails onStart={startCustomWithDetails} />
+              <DemoPatientDetails key={epochRef.current} onStart={startCustomWithDetails} />
             ) : (
               <DemoChatArea
                 messages={uiMessages}

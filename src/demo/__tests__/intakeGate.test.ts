@@ -15,10 +15,12 @@ import {
   selectInterviewTopic,
   INTERVIEW_TOPICS,
 } from '../lib/interviewPrioritization';
-import type { InterviewTopic } from '../lib/harnessTypes';
+import type { InterviewTopic, InterviewPolicyState } from '../lib/harnessTypes';
 
 function askAll(policy = createInitialInterviewPolicy(), topics: InterviewTopic[]) {
-  let current = policy;
+  // Prime lastSelectedTopic so no ask is consumed by the presenting-complaint
+  // turn (the reply to the opening greeting records no finding).
+  let current: InterviewPolicyState = { ...policy, lastSelectedTopic: topics[0] };
   for (const topic of topics) {
     current = applyUserAnswerToPolicy(current, topic, 'Two days ago, it is constant and mild.');
   }
@@ -47,7 +49,8 @@ describe('isIntakeGateSatisfied', () => {
   });
 
   it('counts a blocked topic (asked twice) as covered', () => {
-    let policy = createInitialInterviewPolicy();
+    // Prime past the presenting-complaint turn, then answer ambiguously twice.
+    let policy: InterviewPolicyState = { ...createInitialInterviewPolicy(), lastSelectedTopic: 'allergies' };
     policy = applyUserAnswerToPolicy(policy, 'allergies', 'not sure');
     policy = applyUserAnswerToPolicy(policy, 'allergies', 'still not sure');
     // asked twice → blocked; must still count as covered

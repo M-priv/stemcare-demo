@@ -68,7 +68,13 @@ describe('full scenario rehearsal (page autoplay loop)', () => {
 
       expect(complete).toBe(true);
       expect(turns).toBeLessThanOrEqual(MAX_INTERVIEW_QUESTIONS);
-      expect(state.report).toContain('Interview complete. Report finalized for GP review.');
+      expect(state.report).toContain('Interview complete.');
+      // Canonical clinical skeleton, never internal topic labels.
+      expect(state.report).toContain('## Relevant Medical History');
+      expect(state.report).toMatch(/\*\*Medications\*\*: (?!\*\*)/);
+      expect(state.report).not.toMatch(/GI hydration tolerance|Branch discriminators|Onset and timeline/);
+      // Deterministic provenance citations are present.
+      expect(state.report).toMatch(/\[\[\d+\]\]/);
 
       const outcome = await generateDifferentialHypotheses(state.report, scenarioId);
       expect(outcome.blocked).toBe(false);
@@ -121,6 +127,11 @@ describe('custom-flow rehearsal (visitor types freely)', () => {
     expect(complete).toBe(true);
     expect(state.report).toContain('Persistent dry cough');
     expect(state.report).toMatch(/## Red Flags/);
+    // Free-text answers must still reach the full history block (intake gate).
+    expect(state.report).toMatch(/\*\*Conditions\*\*: (?!Not yet)/);
+    expect(state.report).toMatch(/\*\*Medications\*\*: (?!Not yet)/);
+    expect(state.report).toMatch(/\*\*Allergies\*\*: (?!Not yet)/);
+    expect(state.report).toMatch(/\*\*Family\/Social\*\*: (?!Not yet)/);
 
     const outcome = await generateDifferentialHypotheses(state.report, 'custom');
     expect(outcome.blocked).toBe(false);

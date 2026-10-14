@@ -25,6 +25,7 @@ import type {
   MedGemmaChatMessage,
   MedGemmaChatState,
   InterviewTopic,
+  InterviewPolicyState,
 } from './harnessTypes';
 import {
   createInitialInterviewPolicy,
@@ -32,8 +33,8 @@ import {
   applyUserAnswerToPolicy,
   computeCoverageStatus,
   shouldTerminateInterview,
+  isIntakeGateSatisfied,
   getFallbackQuestion,
-  getTopicLabel,
   validateGeneratedQuestion,
 } from './interviewPrioritization';
 import { evaluateAssistiveOnlyGuardrails } from './assistiveOnlyGuardrails';
@@ -219,16 +220,23 @@ export function buildReportWriterPrompt(
   transcript: ChatTranscriptMessage[],
   currentReport: string,
   presentingComplaint: string,
+  patientName?: string,
+  patientMeta?: string,
 ): string {
   const interviewText = transcript
     .map((msg, i) => `[${i + 1}] ${msg.role === 'user' ? 'Patient' : 'Clinician'}: ${msg.content}`)
     .join('\n');
 
+  const patientLine =
+    patientName || patientMeta
+      ? `Patient: ${patientName || 'Name not provided'}${patientMeta ? ` (${patientMeta})` : ''}\n\n`
+      : '';
+
   return `${REPORT_WRITER_SYSTEM_PROMPT}
 
 Presenting complaint: ${presentingComplaint}
 
-<interview_transcript>
+${patientLine}<interview_transcript>
 ${interviewText}
 </interview_transcript>
 
@@ -238,7 +246,10 @@ ${currentReport || REPORT_TEMPLATE}
 
 Rewrite <current_report> into the required skeleton, incorporating the new
 facts from the interview per the rules above. The skeleton and rules take
-precedence over whatever structure <current_report> currently uses. Return
+precedence over whatever structure <current_report> currently uses. Where the
+skeleton's opening line is concerned, render the patient's name and age/sex
+from the Patient line above as the first line of the report:
+**Patient:** <name> (<age/sex>) — "not provided" when unknown. Return
 ONLY the full Markdown report.`;
 }
 
@@ -254,6 +265,7 @@ export function cleanReportOutput(report: string): string {
 export function initializeChatSession(
   presentingComplaint: string,
   patientName?: string,
+  patientMeta?: string,
 ): MedGemmaChatState {
   const initialPolicy = createInitialInterviewPolicy();
   const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -265,6 +277,7 @@ export function initializeChatSession(
   return {
     sessionId: crypto.randomUUID(),
     patientName: patientName || 'Patient Consultation',
+    patientMeta,
     presentingComplaint,
     messages: [
       {
@@ -325,7 +338,11 @@ export async function processPatientMessage(
       redFlagMessage,
     ];
 
-    const updatedReport = `${state.report}\n\n## Red Flags\n⚠️ **EMERGENCY RED FLAG DETECTED**: ${redFlagCheck.symptom} (${redFlagCheck.urgency})\nGuidance: ${redFlagCheck.guidance}\n\n## Summary\nInterview terminated due to emergency red flag.`;
+    const updatedReport = upsertReportSection(
+      state.report,
+      'Red Flags',
+      `⚠️ **EMERGENCY RED FLAG DETECTED**: ${redFlagCheck.symptom} (${redFlagCheck.urgency})\nGuidance: ${redFlagCheck.guidance}\n\n## Summary\nInterview terminated due to emergency red flag.`,
+    );
 
     return {
       state: {
@@ -356,14 +373,20 @@ export async function processPatientMessage(
   // 3. Update Policy with User Answer
   const currentPolicy = state.interviewPolicy || createInitialInterviewPolicy();
   const lastTopic = currentPolicy.lastSelectedTopic || 'chief_complaint_onset_timeline';
-  const updatedPolicy = applyUserAnswerToPolicy(currentPolicy, lastTopic, userMessage);
+  // 1-based transcript index of the patient message just appended — the
+  // deterministic report's [[n]] citation points here.
+  const answerMessageIndex = isForceWrapUp ? undefined : transcriptWithUser.length;
+  const updatedPolicy = applyUserAnswerToPolicy(currentPolicy, lastTopic, userMessage, answerMessageIndex);
 
-  // 4. Select Next Priority Topic
+  // 3.5 Selection, coverage, termination
   const selection = selectInterviewTopic(updatedPolicy, state.presentingComplaint, userMessage);
   const coverage = computeCoverageStatus(updatedPolicy, state.hasRedFlag);
   const termination = shouldTerminateInterview(updatedPolicy, coverage, selection);
 
-  const shouldEnd = isForceWrapUp || termination.shouldTerminate;
+  // A manual wrap-up is honoured only once the intake gate is satisfied —
+  // the UI disables the button, and this is the defense-in-depth backstop.
+  const wrapUpAllowed = !isForceWrapUp || isIntakeGateSatisfied(coverage);
+  const shouldEnd = (isForceWrapUp && wrapUpAllowed) || termination.shouldTerminate;
 
   // 5. Interviewer response — live model via server proxy when enabled,
   // deterministic policy question otherwise (and on ANY live failure).
@@ -412,29 +435,37 @@ export async function processPatientMessage(
   // 6. Report Writer Persona — live model via server proxy when enabled,
   // deterministic structured update otherwise (and on ANY live failure).
   let updatedReportText = state.report;
+  let liveReportAccepted = false;
 
   if (isLiveMode()) {
     const liveReport = await requestReportUpdate({
       transcript: fullTranscript,
       currentReport: state.report,
       complaint: effectiveComplaint,
+      patientName: state.patientName,
+      patientMeta: state.patientMeta,
     });
     if (liveReport) {
       const cleaned = cleanReportOutput(liveReport);
       const guardrail = evaluateAssistiveOnlyGuardrails(cleaned);
       if (guardrail.action === 'allow') {
         updatedReportText = cleaned;
+        liveReportAccepted = true;
       }
     }
   }
 
-  if (updatedReportText === state.report) {
-    const findingsList = Object.entries(updatedPolicy.topicFindings || {})
-      .filter(([_, val]) => val.trim() !== effectiveComplaint)
-      .map(([t, val]) => `- **${getTopicLabel(t as InterviewTopic)}**: ${val}`)
-      .join('\n');
-
-    updatedReportText = `## Chief Complaint\n${effectiveComplaint || 'Not yet stated'}\n\n## History of Present Illness\n${findingsList || '- Awaiting symptom details.'}\n\n## Red Flags\nScreened negative for emergency red flags.\n\n## Summary\n${shouldEnd ? 'Interview complete. Report finalized for GP review.' : 'Interview in progress.'}`;
+  // On a live failure, keep the accumulated live report rather than
+  // overwriting it with the deterministic skeleton — a mid-interview 503
+  // must not visibly downgrade the briefing the audience is reading.
+  if (!liveReportAccepted && !state.liveReportActive) {
+    updatedReportText = buildDeterministicReport({
+      policy: updatedPolicy,
+      patientName: state.patientName,
+      patientMeta: state.patientMeta,
+      complaint: effectiveComplaint,
+      complete: shouldEnd,
+    });
   }
 
   return {
@@ -443,6 +474,7 @@ export async function processPatientMessage(
       presentingComplaint: effectiveComplaint,
       messages: fullTranscript,
       report: updatedReportText,
+      liveReportActive: liveReportAccepted || state.liveReportActive,
       exchangeCount: state.exchangeCount + 1,
       interviewPolicy: {
         ...updatedPolicy,
@@ -453,4 +485,113 @@ export async function processPatientMessage(
     redFlagDetected: false,
     interviewComplete: shouldEnd,
   };
+}
+
+// =============================================================================
+// Deterministic report compiler — canonical GP skeleton with provenance.
+// Same clinical contract as the live report-writer prompt: third-person
+// section structure, findings under the clinically correct row (never the
+// interview's internal topic labels), no duplicate facts, [[n]] markers
+// pointing at the patient transcript line each finding came from.
+// =============================================================================
+
+const HPI_TOPIC_ROWS: Array<{ row: string; topics: InterviewTopic[] }> = [
+  { row: 'Onset & Duration', topics: ['chief_complaint_onset_timeline'] },
+  { row: 'Severity', topics: ['chief_complaint_severity_impact'] },
+  { row: 'Modifying Factors', topics: ['progression_modifiers'] },
+  { row: 'Interventions Tried', topics: ['self_care_and_response'] },
+  { row: 'Associated Symptoms', topics: ['associated_symptoms_core', 'hydration_tolerance_if_gi'] },
+];
+
+const NEGATION_HEADED = /^(?:no|none|not|never|nah|nope|denies|don'?t|do not|nothing)\b/i;
+
+function isNegativeScreeningAnswer(text: string): boolean {
+  return NEGATION_HEADED.test(text.trim());
+}
+
+export function buildDeterministicReport(options: {
+  policy: InterviewPolicyState;
+  patientName?: string;
+  patientMeta?: string;
+  complaint: string;
+  complete: boolean;
+}): string {
+  const { policy, complaint, complete } = options;
+  const findings = policy.topicFindings || {};
+  const indexes = policy.topicFindingIndexes || {};
+  const seen = new Set<string>();
+
+  const findingEntry = (topic: InterviewTopic): string | null => {
+    const text = (findings[topic] || '').trim();
+    if (!text) return null;
+    const key = text.toLowerCase();
+    if (seen.has(key)) return null; // one fact appears exactly once
+    seen.add(key);
+    const index = indexes[topic];
+    return `${text}${index ? ` [[${index}]]` : ''}`;
+  };
+
+  const renderRow = (row: string, topics: InterviewTopic[], negationRow = false): string | null => {
+    const parts = topics
+      .map(findingEntry)
+      .filter((t): t is string => Boolean(t))
+      .map((text) => (negationRow && !isNegativeScreeningAnswer(text) ? `Reports: ${text}` : text));
+    if (parts.length === 0) return null;
+    return `- **${row}**: ${parts.join('; ')}`;
+  };
+
+  const hpiBullets = [
+    renderRow('Onset & Duration', ['chief_complaint_onset_timeline']),
+    renderRow('Severity', ['chief_complaint_severity_impact']),
+    renderRow('Modifying Factors', ['progression_modifiers']),
+    renderRow('Interventions Tried', ['self_care_and_response']),
+    renderRow('Associated Symptoms', ['associated_symptoms_core', 'hydration_tolerance_if_gi']),
+    // Safety-screen answers: denials read as "Denies …" naturally; any
+    // positive finding is presented as reported, not as a denial.
+    renderRow('Pertinent Negatives', [
+      'breathing_chest_red_flags',
+      'neuro_severe_red_flags',
+      'branch_discriminators',
+      'broad_ros_optional',
+    ], true),
+  ].filter((b): b is string => Boolean(b));
+
+  const historyBullets = [
+    renderRow('Conditions', ['pmh']),
+    renderRow('Medications', ['regular_meds']),
+    renderRow('Allergies', ['allergies']),
+    renderRow('Family/Social', ['family_social', 'exposure_context']),
+  ].filter((b): b is string => Boolean(b));
+
+  const patientLine = `**Patient:** ${options.patientName || 'Not provided'}${options.patientMeta ? ` (${options.patientMeta})` : ''}`;
+
+  return [
+    patientLine,
+    '',
+    '## Chief Complaint',
+    complaint || 'Not yet stated',
+    '',
+    '## History of Present Illness',
+    ...(hpiBullets.length > 0 ? hpiBullets : ['- Awaiting symptom details.']),
+    '',
+    '## Relevant Medical History',
+    ...(historyBullets.length > 0 ? historyBullets : ['- Not yet discussed.']),
+    '',
+    '## Red Flags',
+    'Screened negative for emergency red flags.',
+    '',
+    '## Summary',
+    complete
+      ? 'Interview complete. Structured pre-consultation summary prepared for GP review; clinician assessment pending.'
+      : 'Interview in progress.',
+  ].join('\n');
+}
+
+/** Replace one `## Heading` section's body, or append the section if absent. */
+export function upsertReportSection(markdown: string, heading: string, body: string): string {
+  const pattern = new RegExp(`## ${heading}\\n[\\s\\S]*?(?=\\n## |$)`);
+  if (pattern.test(markdown)) {
+    return markdown.replace(pattern, `## ${heading}\n${body}\n`);
+  }
+  return `${markdown.trimEnd()}\n\n## ${heading}\n${body}`;
 }

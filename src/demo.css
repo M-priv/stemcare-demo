@@ -871,6 +871,7 @@ p {
 }
 
 .demo-msg__bubble {
+  overflow-wrap: anywhere;
   padding: 0.9rem 1.15rem;
   border-radius: 24px 24px 24px 6px;
   background: var(--surface-elevated);
@@ -1241,6 +1242,7 @@ p {
 }
 
 .demo-report-prose {
+  overflow-wrap: anywhere;
   font-size: 0.85rem;
   line-height: 1.6;
   color: var(--ink);

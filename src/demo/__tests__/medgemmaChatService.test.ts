@@ -86,25 +86,51 @@ describe('medgemmaChatService — custom interview flow', () => {
     expect(state.report).toContain(`## Chief Complaint\n${ANSWERS[0]}`);
   });
 
-  it('records findings under human-readable topic labels', async () => {
+  it('compiles findings into the canonical clinical skeleton with citations', async () => {
     let state = initializeChatSession('', 'Guest Patient');
     for (const answer of ANSWERS.slice(0, 5)) {
       state = (await processPatientMessage(state, answer)).state;
     }
-    expect(state.report).toMatch(/- \*\*[A-Z][^*]+\*\*: /); // 'Onset and timeline': ...
+    // Canonical GP sections — never the interview's internal topic labels.
+    expect(state.report).toContain('## Chief Complaint');
+    expect(state.report).toContain('## History of Present Illness');
+    expect(state.report).toContain('## Relevant Medical History');
+    expect(state.report).not.toMatch(/GI hydration tolerance|Branch discriminators|Onset and timeline|Core associated symptoms/);
     expect(state.report).not.toContain('chief_complaint');
+    // Each finding carries a [[n]] provenance marker into the transcript.
+    expect(state.report).toMatch(/\[\[\d+\]\]/);
   });
 });
 
 describe('medgemmaChatService — conclude early', () => {
-  it('appends no empty patient bubble and completes the interview', async () => {
+  it('refuses wrap-up before the intake gate, honours it after, and appends no empty patient bubble', async () => {
     let state = initializeChatSession('', 'Guest Patient');
     state = (await processPatientMessage(state, 'Persistent dry cough for a week')).state;
-    const before = userCount(state);
 
+    // Before the intake gate (HPI core + history block) is satisfied, a
+    // force wrap-up must NOT complete the interview.
+    const early = await processPatientMessage(state, '', true);
+    expect(early.interviewComplete).toBe(false);
+    expect(early.state.report).not.toContain('Interview complete');
+    // The interviewer just asks its next question — no empty user bubble.
+    expect(userCount(early.state)).toBe(userCount(state));
+
+    // Drive a real interview until the intake gate is satisfied.
+    let guard = 0;
+    let complete = false;
+    while (guard++ < 18) {
+      const turn = await processPatientMessage(state, 'It started two days ago, it is mild and constant.');
+      state = turn.state;
+      complete = turn.interviewComplete;
+      if (complete) break;
+    }
+    expect(complete).toBe(true);
+
+    // A wrap-up after the gate appends no empty patient bubble.
+    const before = userCount(state);
     const result = await processPatientMessage(state, '', true);
     expect(result.interviewComplete).toBe(true);
-    expect(userCount(result.state)).toBe(before); // no empty user message
+    expect(userCount(result.state)).toBe(before);
     expect(result.state.messages[result.state.messages.length - 1].role).toBe('assistant');
     expect(result.state.report).toContain('GP review');
   });

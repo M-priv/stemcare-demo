@@ -97,9 +97,10 @@ expected result**.
 2. **Tour** — Open "60s Tour" → four slides; no accuracy/calibration/
    compliance claims; Escape and arrow keys work.
 3. **Curated autoplay** — Press "Auto-Play Case" → interview proceeds one
-   question per turn, no repeated identical questions, ends with the
-   completion phrase (no "End interview." marker visible); briefing updates
-   each turn.
+   question per turn (~13 turns: core HPI plus the full history block),
+   no repeated identical questions, ends with the completion phrase (no
+   "End interview." marker visible); briefing updates each turn and every
+   finding cites its source chat line.
 4. **Differentials** — After completion → "Differential Dx" tab shows 3
    ranked hypotheses with plausibility buckets (no fabricated percentages),
    guideline references, and "For Clinician Review" actions.
@@ -151,12 +152,14 @@ expected result**.
     interact freely → zero requests fire while typing/sending (only static
     asset loads at startup). In live mode, the only requests are to
     `/api/gemini` on the same origin — never to a model provider host.
-21. **Report citations (live mode)** — In live mode, after a few interview
-    turns, HPI/history bullets in the Clinical Briefing end with small
-    numbered chips. Hovering a chip shows the verbatim patient line it was
-    paraphrased from; clicking it switches to the Chat tab, scrolls to the
-    source message, and flashes it. Chips must never appear for clinician
-    lines, and deterministic-mode reports carry no chips.
+21. **Report citations** — After a few interview turns, HPI/history bullets in
+    the Clinical Briefing end with small numbered chips (in BOTH modes: the
+    deterministic engine knows the exact source line of every finding).
+    Hovering a chip shows the verbatim patient line it was paraphrased from;
+    clicking it (or focusing it and pressing Enter) switches to the Chat tab,
+    scrolls to the source message, and flashes it. Chips must never appear
+    for clinician lines, and each finding carries exactly one citation even
+    if the same words appear twice in the chat.
 
 ## Known limitations (by design — not bugs)
 

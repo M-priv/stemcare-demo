@@ -50,6 +50,7 @@ export interface DemoApiRequest {
   history?: unknown;
   complaint?: unknown;
   patientName?: unknown;
+  patientMeta?: unknown;
   currentReport?: unknown;
   control?: unknown;
   transcript?: unknown;
@@ -322,7 +323,9 @@ async function runReportWriter(body: DemoApiRequest, opts: { apiKey: string; mod
   const currentReport = asString(body.currentReport, MAX_REPORT_CHARS);
   if (!transcript || !complaint || !currentReport) return fallbackResponse(400, 'invalid_payload');
 
-  const prompt = buildReportWriterPrompt(transcript, currentReport, complaint);
+  const patientName = asString(body.patientName, MAX_NAME_CHARS) ?? undefined;
+  const patientMeta = asString(body.patientMeta, 80) ?? undefined;
+  const prompt = buildReportWriterPrompt(transcript, currentReport, complaint, patientName, patientMeta);
   const text = await callGemini(prompt, opts, { temperature: 0.25, maxOutputTokens: 1024 });
   if (!text) return fallbackResponse(502, 'model_unavailable');
 

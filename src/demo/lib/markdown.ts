@@ -48,6 +48,9 @@ function escapeHtmlText(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    // marked still parses markdown inside raw inline HTML, so neutralise
+    // markdown-significant characters to keep the quote truly verbatim.
+    .replace(/([\\`*_\[\]])/g, '\\$1')
     .replace(/\n+/g, ' ');
 }
 
@@ -61,9 +64,12 @@ export function renderReportMarkdownToSafeHtml(
     (_match, rawIndex: string) => {
       const source = byIndex.get(Number(rawIndex));
       if (!source || !source.isPatient || !source.quote) return '';
+      // Truncate on code-point boundaries (a raw slice can split a surrogate
+      // pair and corrupt the last character).
+      const chars = Array.from(source.quote);
       const quote =
-        source.quote.length > MAX_QUOTE_CHARS
-          ? source.quote.slice(0, MAX_QUOTE_CHARS).trimEnd() + '…'
+        chars.length > MAX_QUOTE_CHARS
+          ? chars.slice(0, MAX_QUOTE_CHARS).join('').trimEnd() + '…'
           : source.quote;
       return (
         `<sup class="demo-cite" data-msg-index="${source.index}" tabindex="0">` +

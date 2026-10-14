@@ -52,6 +52,8 @@ export interface InterviewPolicyState {
   questionsAsked: number;
   askedTopicCounts: Partial<Record<InterviewTopic, number>>;
   topicFindings?: Partial<Record<InterviewTopic, string>>;
+  /** 1-based transcript index of the patient message each finding came from. */
+  topicFindingIndexes?: Partial<Record<InterviewTopic, number>>;
   blockedTopics: InterviewTopic[];
   clarificationUsedTopics: InterviewTopic[];
   lowYieldStreak: number;
@@ -65,9 +67,13 @@ export interface MedGemmaChatState {
   sessionId: string;
   patientName?: string;
   patientId?: string;
+  /** Age/sex descriptor shown in the report header (e.g. "34 yo Female"). */
+  patientMeta?: string;
   presentingComplaint: string;
   messages: MedGemmaChatMessage[];
   report: string;
+  /** True once a live model report has been accepted for this session. */
+  liveReportActive?: boolean;
   hasRedFlag: boolean;
   redFlagReason?: string;
   exchangeCount: number;

@@ -44,6 +44,14 @@ export const INTERVIEW_TOPICS: InterviewTopic[] = [
   'broad_ros_optional',
 ];
 
+/** Topics the intake gate requires before the interview may end. */
+export const INTAKE_GATE_TOPICS: InterviewTopic[] = [
+  'pmh',
+  'regular_meds',
+  'allergies',
+  'family_social',
+];
+
 export const TOPIC_BASE_PRIORITIES: Record<InterviewTopic, number> = {
   breathing_chest_red_flags: 100,
   neuro_severe_red_flags: 95,
@@ -159,6 +167,7 @@ export function createInitialInterviewPolicy(): InterviewPolicyState {
   return {
     questionsAsked: 1, // Opening greeting counts as question 1
     askedTopicCounts: { chief_complaint_onset_timeline: 0 },
+    topicFindingIndexes: {},
     blockedTopics: [],
     clarificationUsedTopics: [],
     lowYieldStreak: 0,
@@ -209,6 +218,18 @@ export function selectInterviewTopic(
       reasons.push('Emergency trigger boost: +30');
     }
 
+    // Intake-gate floor: once the interview is past its early phase, unasked
+    // gate topics outrank everything — including boosted repeat asks — so the
+    // history block can never be pushed past the hard cap by re-asks.
+    if (
+      policy.questionsAsked >= 10 &&
+      INTAKE_GATE_TOPICS.includes(topic) &&
+      askCount === 0
+    ) {
+      score += 100;
+      reasons.push('Intake gate floor: +100');
+    }
+
     // Boost onset/severity early in interview
     if (
       (topic === 'chief_complaint_onset_timeline' || topic === 'chief_complaint_severity_impact') &&
@@ -247,6 +268,7 @@ export function applyUserAnswerToPolicy(
   policy: InterviewPolicyState,
   topic: InterviewTopic,
   userAnswer: string,
+  answerMessageIndex?: number,
 ): InterviewPolicyState {
   const currentCount = countForTopic(policy, topic);
   const updatedCounts = {
@@ -254,17 +276,42 @@ export function applyUserAnswerToPolicy(
     [topic]: currentCount + 1,
   };
 
-  const findings = {
+  // The answer that DEFINES the presenting complaint (the reply to the
+  // opening greeting) belongs to the complaint, not to the topic the policy
+  // had seeded — recording it there misfiled the complaint under "Onset",
+  // and its ask-count/recent-penalty crowded out the real onset question.
+  // Count the turn only; the topic stays untouched so its actual question
+  // gets asked next.
+  if (!policy.lastSelectedTopic) {
+    return {
+      ...policy,
+      questionsAsked: policy.questionsAsked + 1,
+      lastSelectedTopic: topic,
+    };
+  }
+
+  // Keep the FIRST answer per topic: a re-ask must never destroy an earlier
+  // finding (that is how pertinent negatives used to vanish from the report).
+  const existingFinding = policy.topicFindings?.[topic];
+  const updatedFindings = {
     ...policy.topicFindings,
-    [topic]: userAnswer.trim(),
+    ...(existingFinding ? {} : { [topic]: userAnswer.trim() }),
+  };
+
+  const existingIndex = policy.topicFindingIndexes?.[topic];
+  const updatedIndexes = {
+    ...policy.topicFindingIndexes,
+    ...(existingIndex || !answerMessageIndex ? {} : { [topic]: answerMessageIndex }),
   };
 
   const isAmbiguous = AMBIGUOUS_PATTERNS.some((p) => p.test(userAnswer));
   const isSpecific = SPECIFIC_PATTERNS.some((p) => p.test(userAnswer));
 
   const updatedBlocked = [...policy.blockedTopics];
-  // If specific answer received or asked twice, block from further re-asking
-  if ((isSpecific && !isAmbiguous) || currentCount + 1 >= 2) {
+  // A non-ambiguous answer closes the topic (one focused question each keeps
+  // the 15-question budget compatible with the intake gate). An ambiguous
+  // answer stays open for exactly one clarifying re-ask; two asks always do.
+  if (!isAmbiguous || currentCount + 1 >= 2) {
     if (!updatedBlocked.includes(topic)) {
       updatedBlocked.push(topic);
     }
@@ -276,7 +323,8 @@ export function applyUserAnswerToPolicy(
     ...policy,
     questionsAsked: policy.questionsAsked + 1,
     askedTopicCounts: updatedCounts,
-    topicFindings: findings,
+    topicFindings: updatedFindings,
+    topicFindingIndexes: updatedIndexes,
     blockedTopics: updatedBlocked,
     recentTopics: updatedRecent,
     lastSelectedTopic: topic,

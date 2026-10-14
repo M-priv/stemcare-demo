@@ -15,6 +15,7 @@ import {
 import type { ClinicalReportSnapshot, DifferentialHypothesis, ClinicianReviewDecision } from '../types';
 import { compileReportToMarkdown } from '../lib/medgemmaEngine';
 import { renderReportMarkdownToSafeHtml, type ReportCitationSource } from '../lib/markdown';
+import { isLiveMode } from '../lib/demoApi';
 import { DemoClinicianReview } from './DemoClinicianReview';
 
 const CONFIDENCE_LABELS: Record<DifferentialHypothesis['confidenceBucket'], string> = {
@@ -80,7 +81,9 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   );
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(markdownContent);
+    // Strip citation markers: [[n]] means "patient transcript line n" inside
+    // the app; a pasted copy should carry the findings, not orphaned digits.
+    navigator.clipboard.writeText(markdownContent.replace(/\[\[(\d{1,2})\]\]/g, ''));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -152,7 +155,9 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           <span className="demo-report-status-text">
             {report.isFinalized
               ? 'Clinical Intake Finalized'
-              : 'Live Dual-Persona Synthesis Active'}
+              : isLiveMode()
+                ? 'Live Dual-Persona Synthesis Active'
+                : 'Local Structured Synthesis Active'}
           </span>
         </div>
         <span className="demo-report-timestamp">Updated {report.lastUpdated}</span>
@@ -165,6 +170,16 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             <div
               className="demo-report-prose"
               onClick={handleContentClick}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                const cite = (e.target as HTMLElement).closest?.('.demo-cite') as HTMLElement | null;
+                if (!cite || !onCitationClick) return;
+                const index = Number(cite.dataset.msgIndex);
+                if (Number.isFinite(index) && index >= 1) {
+                  e.preventDefault();
+                  onCitationClick(index);
+                }
+              }}
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
 
