@@ -1,4 +1,5 @@
 import React from 'react';
+import { Moon, Sun } from 'lucide-react';
 import { DEMO_SCENARIOS } from '../lib/scenarios';
 import { isLiveMode } from '../lib/demoApi';
 import type { ScenarioConditionId } from '../types';
@@ -157,7 +158,7 @@ export const DemoHeader: React.FC<DemoHeaderProps> = ({
             onClick={onThemeToggle}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {theme === 'dark' ? 'Light' : 'Dark'}
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
       </div>

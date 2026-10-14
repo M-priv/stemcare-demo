@@ -560,9 +560,8 @@ p {
 }
 
 .demo-header__theme-toggle {
-  min-width: 36px;
+  width: 36px;
   height: 36px;
-  padding: 0 0.8rem;
   border-radius: 9999px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -2540,11 +2539,6 @@ p {
 }
 
 @media (max-width: 720px) {
-  .demo-header__theme-toggle {
-    flex-shrink: 0;
-    min-height: 34px;
-  }
-
   .demo-notice-banner {
     width: 100%;
   }
