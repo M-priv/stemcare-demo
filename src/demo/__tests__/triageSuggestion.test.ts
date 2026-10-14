@@ -44,3 +44,31 @@ describe('suggestTriage', () => {
     expect(s.reason).toContain('Migraine without aura');
   });
 });
+
+describe('extractCitedSummary', () => {
+  it('returns the HPI bullets with citations and stops at the next section', async () => {
+    const { extractCitedSummary } = await import('../lib/medgemmaEngine');
+    const report = [
+      '## Chief Complaint',
+      'Headache',
+      '',
+      '## History of Present Illness',
+      '- **Onset**: Two days ago [[4]]',
+      '- **Severity**: 7 to 8 out of 10 [[6]]',
+      '',
+      '## Relevant Medical History',
+      '- **Medications**: Paracetamol [[9]]',
+    ].join('\n');
+    const summary = extractCitedSummary(report);
+    expect(summary).toContain('**Onset**: Two days ago [[4]]');
+    expect(summary).toContain('**Severity**');
+    expect(summary).not.toContain('Medications');
+    expect(summary).not.toContain('Chief Complaint');
+  });
+
+  it('returns empty when the report has no HPI section', async () => {
+    const { extractCitedSummary } = await import('../lib/medgemmaEngine');
+    expect(extractCitedSummary('')).toBe('');
+    expect(extractCitedSummary('## Red Flags\nNone')).toBe('');
+  });
+});

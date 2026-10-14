@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import type { DifferentialHypothesis, ClinicianReviewDecision } from '../types';
-import { suggestTriage, pathwayLabel } from '../lib/triageSuggestion';
+import { suggestTriage, pathwayLabel, type ActionPathway } from '../lib/triageSuggestion';
+import { renderReportMarkdownToSafeHtml, type ReportCitationSource } from '../lib/markdown';
+import { extractCitedSummary } from '../lib/medgemmaEngine';
 
 interface DemoClinicianReviewProps {
   hypotheses: DifferentialHypothesis[];
@@ -8,7 +10,20 @@ interface DemoClinicianReviewProps {
   onReviewSubmitted: (decision: ClinicianReviewDecision) => void;
   existingReview: ClinicianReviewDecision | null;
   onResetReview: () => void;
+  patientName?: string;
+  /** Compiled briefing markdown; its cited HPI lines form the review summary. */
+  reportMarkdown?: string;
+  citationSources?: ReportCitationSource[];
+  onCitationClick?: (transcriptIndex: number) => void;
 }
+
+const DISPOSITIONS: Array<{ id: ActionPathway; label: string; desc: string }> = [
+  { id: 'same_day_gp', label: 'Same-Day Urgent GP Review', desc: 'Book priority in-person evaluation' },
+  { id: 'routine_gp', label: 'Routine GP Consultation', desc: 'Book standard clinic appointment' },
+  { id: 'specialist_referral', label: 'Direct Specialist Referral', desc: 'Prepare secondary care draft' },
+  { id: 'emergency_transfer', label: 'Emergency Transfer (A&E / 999)', desc: 'Immediate acute hospital escalation' },
+  { id: 'self_care_safety_net', label: 'Self-Care + Safety-Net', desc: 'Send patient advice with escalation criteria' },
+];
 
 export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   hypotheses,
@@ -16,59 +31,55 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   onReviewSubmitted,
   existingReview,
   onResetReview,
+  patientName,
+  reportMarkdown,
+  citationSources,
+  onCitationClick,
 }) => {
-  const [selectedHypothesisId, setSelectedHypothesisId] = useState<string>(
-    hypotheses[0]?.id || (hypotheses.length === 0 ? 'emergency_red_flag' : '')
-  );
-  const [actionPathway, setActionPathway] = useState<
-    ClinicianReviewDecision['actionPathway']
-  >(hypotheses.length === 0 ? 'emergency_transfer' : suggestTriage(hypotheses[0]).pathway);
+  const [mode, setMode] = useState<'conclude' | 'edit'>('conclude');
+  const [editedPathway, setEditedPathway] = useState<ActionPathway | null>(null);
   const [clinicianNotes, setClinicianNotes] = useState('');
-  const [overrideReason, setOverrideReason] = useState('');
-
-  // Keep top hypothesis selected by default if hypotheses change
-  React.useEffect(() => {
-    if (hypotheses.length > 0 && (!selectedHypothesisId || selectedHypothesisId === 'emergency_red_flag')) {
-      setSelectedHypothesisId(hypotheses[0].id);
-    } else if (hypotheses.length === 0) {
-      setSelectedHypothesisId('emergency_red_flag');
-    }
-  }, [hypotheses, selectedHypothesisId]);
 
   const topHypothesis = hypotheses[0];
-  const selectedHypothesis = hypotheses.find((h) => h.id === selectedHypothesisId);
-  const triageSuggestion = suggestTriage(selectedHypothesis, false);
-  const isOverridingTop = Boolean(
-    selectedHypothesisId &&
-    topHypothesis &&
-    selectedHypothesisId !== topHypothesis.id
-  );
+  const hasRedFlag = hypotheses.length === 0;
+  const suggestion = suggestTriage(topHypothesis, hasRedFlag);
+  const finalPathway: ActionPathway = mode === 'edit' && editedPathway ? editedPathway : suggestion.pathway;
+  const isModified = finalPathway !== suggestion.pathway;
 
-  const handleSign = () => {
-    const decision: ClinicianReviewDecision = {
-      decision: isOverridingTop ? 'modify' : 'approve',
-      selectedHypothesisId,
-      actionPathway,
-      overrideReason: isOverridingTop ? overrideReason : undefined,
+  const summaryHtml = React.useMemo(() => {
+    const hpi = extractCitedSummary(reportMarkdown || '');
+    if (!hpi.trim()) return '';
+    return renderReportMarkdownToSafeHtml(hpi, citationSources ?? []);
+  }, [reportMarkdown, citationSources]);
+
+  const handleSummaryClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onCitationClick) return;
+    const cite = (e.target as HTMLElement).closest?.('.demo-cite') as HTMLElement | null;
+    if (!cite) return;
+    const index = Number(cite.dataset.msgIndex);
+    if (Number.isFinite(index) && index >= 1) onCitationClick(index);
+  };
+
+  const sign = () => {
+    onReviewSubmitted({
+      decision: isModified ? 'modify' : 'approve',
+      selectedHypothesisId: topHypothesis?.id || 'emergency_red_flag',
+      actionPathway: finalPathway,
       clinicianNotes: clinicianNotes.trim() || undefined,
       signedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       clinicianName: 'Dr. Sarah Jenkins (Simulated Persona)',
       clinicianRole: 'Simulated Attending GP — demo walkthrough only',
-    };
-    onReviewSubmitted(decision);
+    });
   };
 
   if (existingReview) {
-    const chosenHypothesis = hypotheses.find((h) => h.id === existingReview.selectedHypothesisId);
-
     return (
       <div className="demo-review-signed animate-fade-in">
         <div className="demo-review-signed__card">
           <div className="demo-review-signed__header">
-            <div className="demo-review-signed__seal">
-            </div>
+            <div className="demo-review-signed__seal" />
             <div>
-              <h3 className="demo-review-signed__title">Clinical Disposition Authorized</h3>
+              <h3 className="demo-review-signed__title">Disposition authorized</h3>
               <p className="demo-review-signed__meta">
                 Signed by {existingReview.clinicianName} · {existingReview.signedAt}
               </p>
@@ -77,29 +88,15 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
 
           <div className="demo-review-signed__body">
             <div className="demo-review-signed__row">
-              <span className="demo-review-signed__label">Accepted Diagnosis:</span>
-              <span className="demo-review-signed__val font-semibold">
-                {chosenHypothesis?.condition || (existingReview.selectedHypothesisId === 'emergency_red_flag' ? 'Emergency Clinical Escalation' : 'Clinical assessment confirmed')}
-              </span>
-            </div>
-
-            <div className="demo-review-signed__row">
-              <span className="demo-review-signed__label">Authorized Pathway:</span>
+              <span className="demo-review-signed__label">Pathway:</span>
               <span className="demo-review-signed__badge">
                 {existingReview.actionPathway.replace(/_/g, ' ').toUpperCase()}
               </span>
             </div>
 
-            {existingReview.overrideReason && (
-              <div className="demo-review-signed__row">
-                <span className="demo-review-signed__label">Clinician Override Rationale:</span>
-                <span className="demo-review-signed__val">{existingReview.overrideReason}</span>
-              </div>
-            )}
-
             {existingReview.clinicianNotes && (
               <div className="demo-review-signed__row">
-                <span className="demo-review-signed__label">Clinical Instructions:</span>
+                <span className="demo-review-signed__label">Notes:</span>
                 <span className="demo-review-signed__val">{existingReview.clinicianNotes}</span>
               </div>
             )}
@@ -111,199 +108,114 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            className="demo-review-signed__edit-btn"
-            onClick={onResetReview}
-          >
-            <span>Modify Disposition</span>
+          <button type="button" className="demo-review-signed__edit-btn" onClick={onResetReview}>
+            <span>Modify disposition</span>
           </button>
         </div>
       </div>
     );
   }
 
+  const otherDispositions = DISPOSITIONS.filter((d) => d.id !== suggestion.pathway);
+
   return (
-    <div className="demo-clinician-review">
+    <div className="demo-clinician-review animate-fade-in">
       <div className="demo-clinician-review__header">
         <div className="demo-clinician-review__title-row">
-          <h3 className="demo-clinician-review__title">Clinician Decision Support</h3>
+          <h3 className="demo-clinician-review__title">
+            Clinician review{patientName ? `: ${patientName}` : ''}
+          </h3>
           {!isInterviewComplete && (
-            <span className="demo-clinician-review__prelim-badge">Preliminary Intake</span>
+            <span className="demo-clinician-review__prelim-badge">Preliminary</span>
           )}
         </div>
-        <p className="demo-clinician-review__subtitle">
-          STEMCare separates AI synthesis from medical authority. Review the differential hypotheses proposed by MedGemma, adjust if necessary, and authorize the care pathway.
-        </p>
       </div>
 
-      {/* Differential Hypotheses List */}
-      {hypotheses.length === 0 ? (
-        <div className="demo-diff-empty-card my-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="font-semibold text-sm text-foreground">
-              Emergency Safety Escalation Pathway
-            </span>
-          </div>
-          <p className="text-xs text-muted mb-3">
-            Hypothesis generation was blocked due to emergency red flags. Authorize emergency transfer (999 dispatch / A&E) or override with clinical assessment.
-          </p>
+      {/* Summary of the relevant chat info, with citations back to the transcript */}
+      {summaryHtml ? (
+        <div className="demo-review-summary">
+          <span className="demo-review-summary__label">From the chat</span>
           <div
-            className={`demo-diff-card demo-diff-card--selected demo-diff-card--danger`}
-            onClick={() => setSelectedHypothesisId('emergency_red_flag')}
-          >
-            <div className="demo-diff-card__top">
-              <div className="demo-diff-card__radio-row">
-                <input
-                  type="radio"
-                  name="hypothesis_selection"
-                  checked={selectedHypothesisId === 'emergency_red_flag'}
-                  onChange={() => setSelectedHypothesisId('emergency_red_flag')}
-                  className="demo-diff-card__radio"
-                />
-                <span className="demo-diff-card__name font-bold text-rose-500">
-                  Critical Emergency Red Flag Protocol
-                </span>
-              </div>
-              <span className="demo-diff-card__prob-badge demo-diff-card__prob-badge--high">
-                Immediate Action
-              </span>
-            </div>
-            <p className="text-xs text-muted mt-2">
-              Action: Direct patient to emergency services; notify attending triage GP.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="demo-diff-list">
-          <span className="demo-diff-list__label">Ranked Hypotheses (illustrative — for clinician review):</span>
-
-          {hypotheses.map((hyp, index) => {
-            const isSelected = selectedHypothesisId === hyp.id;
-            const isTop = index === 0;
-
-            return (
-              <div
-                key={hyp.id}
-                className={`demo-diff-card ${isSelected ? 'demo-diff-card--selected' : ''} ${
-                  isTop ? 'demo-diff-card--top' : ''
-                }`}
-                onClick={() => setSelectedHypothesisId(hyp.id)}
-              >
-                <div className="demo-diff-card__top">
-                  <div className="demo-diff-card__radio-row">
-                    <input
-                      type="radio"
-                      name="hypothesis_selection"
-                      checked={isSelected}
-                      onChange={() => setSelectedHypothesisId(hyp.id)}
-                      className="demo-diff-card__radio"
-                    />
-                    <span className="demo-diff-card__name">{hyp.condition}</span>
-                  </div>
-
-                  <div className="demo-diff-card__badges">
-                    <span
-                      className={`demo-diff-card__prob-badge demo-diff-card__prob-badge--${hyp.confidenceBucket}`}
-                      title="Illustrative ranking bucket — probabilities in this demo are not calibrated estimates"
-                    >
-                      {hyp.confidenceBucket === 'high' ? 'High plausibility' : hyp.confidenceBucket === 'medium' ? 'Medium plausibility' : 'Low plausibility'}
-                    </span>
-                    {isTop && <span className="demo-diff-card__top-badge">Primary Candidate</span>}
-                  </div>
-                </div>
-
-                <div className="demo-diff-card__findings">
-                  {hyp.keyFindings.map((finding, fIdx) => (
-                    <div key={fIdx} className="demo-diff-card__finding-item">
-                      <span>{finding}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="demo-diff-card__action">
-                  <span className="demo-diff-card__action-label">For Clinician Review:</span>
-                  <p className="demo-diff-card__action-text">{hyp.recommendedAction}</p>
-                  <span className="demo-diff-card__guideline">{hyp.guidelineRef}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Override prompt if selecting secondary hypothesis */}
-      {isOverridingTop && (
-        <div className="demo-clinician-override animate-fade-in">
-          <div className="demo-clinician-override__header">
-            <span>Overriding Primary Candidate: Reason Required for Audit</span>
-          </div>
-          <input
-            type="text"
-            className="demo-clinician-override__input"
-            placeholder="e.g. Clinical history and prior presentation favor secondary differential..."
-            value={overrideReason}
-            onChange={(e) => setOverrideReason(e.target.value)}
+            className="demo-review-summary__body"
+            onClick={handleSummaryClick}
+            dangerouslySetInnerHTML={{ __html: summaryHtml }}
           />
         </div>
-      )}
-
-      {/* Care Pathway Disposition Selection */}
-      <div className="demo-pathway-selection">
-        <span className="demo-pathway-selection__label">Select Disposition & Next Action:</span>
-        <p className="demo-pathway-selection__suggestion">
-          Suggested triage: <strong>{pathwayLabel(triageSuggestion.pathway)}</strong>. {triageSuggestion.reason}
-        </p>
-        <div className="demo-pathway-selection__grid">
-          {[
-            { id: 'same_day_gp', label: 'Same-Day Urgent GP Review', desc: 'Book priority in-person evaluation' },
-            { id: 'routine_gp', label: 'Routine GP Consultation', desc: 'Book standard clinic appointment' },
-            { id: 'specialist_referral', label: 'Direct Specialist Referral', desc: 'Prepare secondary care draft' },
-            { id: 'emergency_transfer', label: 'Emergency Transfer (A&E / 999)', desc: 'Immediate acute hospital escalation' },
-            { id: 'self_care_safety_net', label: 'Self-Care + Safety-Net', desc: 'Send patient advice with escalation criteria' },
-          ].map((path) => (
-            <button
-              key={path.id}
-              type="button"
-              className={`demo-pathway-card ${actionPathway === path.id ? 'demo-pathway-card--selected' : ''}`}
-              onClick={() => setActionPathway(path.id as ClinicianReviewDecision['actionPathway'])}
-            >
-              <span className="demo-pathway-card__title">
-                {path.label}
-                {triageSuggestion.pathway === path.id && (
-                  <span className="demo-pathway-card__suggested">Suggested</span>
-                )}
-              </span>
-              <span className="demo-pathway-card__desc">{path.desc}</span>
-            </button>
-          ))}
+      ) : hasRedFlag ? (
+        <div className="demo-review-summary">
+          <span className="demo-review-summary__label">Emergency</span>
+          <p className="demo-review-summary__body">
+            An emergency red flag halted the interview. Authorize escalation below.
+          </p>
         </div>
-      </div>
+      ) : null}
 
-      {/* Clinician Notes */}
-      <div className="demo-clinician-notes">
-        <label htmlFor="clinician_notes" className="demo-clinician-notes__label">
-          Clinician Sign-Off Notes (Optional):
-        </label>
-        <textarea
-          id="clinician_notes"
-          className="demo-clinician-notes__textarea"
-          rows={2}
-          placeholder="e.g. Reviewed with patient history. Agreed on primary management pathway."
-          value={clinicianNotes}
-          onChange={(e) => setClinicianNotes(e.target.value)}
-        />
-      </div>
+      {/* Conclusion + approve/edit */}
+      <div className="demo-review-conclusion">
+        <p className="demo-review-conclusion__lead">Here's what I concluded we should do:</p>
+        <p className="demo-review-conclusion__pathway">{pathwayLabel(finalPathway)}</p>
+        <p className="demo-review-conclusion__reason">{suggestion.reason}</p>
+        {isModified && (
+          <p className="demo-review-conclusion__edited">
+            Edited from the suggested {pathwayLabel(suggestion.pathway)}.
+          </p>
+        )}
 
-      {/* Authorize Button */}
-      <button
-        type="button"
-        className="demo-authorize-btn"
-        disabled={Boolean(isOverridingTop && !overrideReason.trim())}
-        onClick={handleSign}
-      >
-        <span>Authorize Clinical Disposition</span>
-      </button>
+        <div className="demo-review-conclusion__actions">
+          <button type="button" className="demo-authorize-btn" onClick={sign}>
+            <span>Approve</span>
+          </button>
+          <button
+            type="button"
+            className="demo-pill-btn demo-pill-btn--ghost"
+            onClick={() => {
+              const next = mode === 'edit' ? 'conclude' : 'edit';
+              setMode(next);
+              if (next === 'conclude') setEditedPathway(null);
+            }}
+          >
+            <span>{mode === 'edit' ? 'Close' : 'Edit'}</span>
+          </button>
+        </div>
+
+        {mode === 'edit' && (
+          <div className="demo-review-edit">
+            <span className="demo-review-edit__label">Other dispositions:</span>
+            <div className="demo-review-edit__options">
+              {otherDispositions.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  className={`demo-pathway-card ${editedPathway === d.id ? 'demo-pathway-card--selected' : ''}`}
+                  onClick={() => setEditedPathway(d.id)}
+                >
+                  <span className="demo-pathway-card__title">{d.label}</span>
+                  <span className="demo-pathway-card__desc">{d.desc}</span>
+                </button>
+              ))}
+            </div>
+            <label htmlFor="clinician_notes" className="demo-review-edit__notes-label">
+              Notes (optional):
+            </label>
+            <textarea
+              id="clinician_notes"
+              className="demo-clinician-notes__textarea"
+              rows={2}
+              placeholder="e.g. Agreed on the suggested pathway with the patient."
+              value={clinicianNotes}
+              onChange={(e) => setClinicianNotes(e.target.value)}
+            />
+            <button
+              type="button"
+              className="demo-authorize-btn"
+              disabled={!editedPathway}
+              onClick={sign}
+            >
+              <span>Authorize disposition</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

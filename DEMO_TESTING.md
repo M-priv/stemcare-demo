@@ -104,15 +104,17 @@ expected result**.
    no repeated identical questions, ends with the completion phrase (no
    "End interview." marker visible); briefing updates each turn and every
    finding cites its source chat line.
-4. **Differentials** — After completion → "Differential Dx" tab shows 3
-   ranked hypotheses with plausibility buckets (no fabricated percentages),
-   guideline references, and "For Clinician Review" actions.
-5. **Clinician gate** — Authorize a disposition → sign-off card appears with
-   a *simulated* clinician persona and an honest receipt line; "Modify
-   Disposition" resets the gate.
-6. **Override enforcement** — Select a non-primary hypothesis → a reason is
-   REQUIRED before "Authorize" enables (mirrors production
-   reject-requires-notes).
+4. **Handoff** — After completion → the "Handoff" tab shows a system
+   message ("X just finished their chat with us") with the outcome and an
+   "Open review" button that switches to the Review tab.
+5. **Review** — The review is short and cited: a "From the chat" card lists
+   the key findings, each with a citation chip (hover shows the verbatim
+   chat line, click jumps to the message); below it, "Here's what I
+   concluded we should do:" states the suggested triage with its reason.
+6. **Approve / Edit** — Approve signs the suggested triage immediately
+   (receipt card with Modify). Edit drops down the other dispositions;
+   picking one and authorizing records the edit ("Edited from the
+   suggested …"). Authorize stays disabled until a disposition is picked.
 7. **Custom case** — Switch to "Fresh Start (Custom Case)" → a details card
    asks for name, age, and sex (all optional; blanks render as "not
    provided" in the report rather than a fictional identity) → start the

@@ -87,3 +87,26 @@ ${report.redFlags.map((item) => `- ${item}`).join('\n')}
 ${report.clinicalAssessment.map((item) => `- ${item}`).join('\n')}
 `;
 }
+
+/**
+ * Extract the cited HPI bullet lines from a compiled report — the compact
+ * "relevant info" summary shown in the clinician review. Returns only the
+ * bullet lines between the HPI heading and the next section, citations
+ * ([[n]] markers) intact.
+ */
+export function extractCitedSummary(report: string): string {
+  const lines = (report ?? '').split('\n');
+  const start = lines.findIndex((l) => l.trim().toLowerCase().startsWith('## history of present illness'));
+  if (start === -1) return '';
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].trim().startsWith('## ')) {
+      end = i;
+      break;
+    }
+  }
+  return lines
+    .slice(start + 1, end)
+    .filter((l) => l.trim().startsWith('-'))
+    .join('\n');
+}
