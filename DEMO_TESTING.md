@@ -145,6 +145,12 @@ expected result**.
     interact freely → zero requests fire while typing/sending (only static
     asset loads at startup). In live mode, the only requests are to
     `/api/gemini` on the same origin — never to a model provider host.
+21. **Report citations (live mode)** — In live mode, after a few interview
+    turns, HPI/history bullets in the Clinical Briefing end with small
+    numbered chips. Hovering a chip shows the verbatim patient line it was
+    paraphrased from; clicking it switches to the Chat tab, scrolls to the
+    source message, and flashes it. Chips must never appear for clinician
+    lines, and deterministic-mode reports carry no chips.
 
 ## Known limitations (by design — not bugs)
 

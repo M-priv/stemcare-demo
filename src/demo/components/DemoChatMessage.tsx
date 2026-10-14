@@ -5,9 +5,11 @@ import { renderMarkdownToSafeHtml } from '../lib/markdown';
 
 interface DemoChatMessageProps {
   message: DemoChatMessageType;
+  /** 1-based position in the transcript; targeted by report citation clicks. */
+  transcriptIndex?: number;
 }
 
-export const DemoChatMessage: React.FC<DemoChatMessageProps> = ({ message }) => {
+export const DemoChatMessage: React.FC<DemoChatMessageProps> = ({ message, transcriptIndex }) => {
   const isUser = message.role === 'user';
   const isRedFlag = message.variant === 'red_flag';
 
@@ -19,6 +21,7 @@ export const DemoChatMessage: React.FC<DemoChatMessageProps> = ({ message }) => 
 
   return (
     <div
+      data-chat-msg-index={transcriptIndex}
       className={`demo-msg ${
         isUser ? 'demo-msg--user' : 'demo-msg--assistant'
       } ${isRedFlag ? 'demo-msg--red-flag' : ''}`}

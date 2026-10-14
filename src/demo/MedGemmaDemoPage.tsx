@@ -26,6 +26,7 @@ import {
 import { generateDifferentialHypotheses } from './lib/differentials';
 import { createInitialReport } from './lib/medgemmaEngine';
 import { isLiveMode } from './lib/demoApi';
+import type { ReportCitationSource } from './lib/markdown';
 import { DemoHeader } from './components/DemoHeader';
 import { DemoChatArea } from './components/DemoChatArea';
 import { DemoChatInput } from './components/DemoChatInput';
@@ -360,6 +361,27 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   const userMessageCount = chatState.messages.filter((m) => m.role === 'user').length;
   const canConcludeEarly = !isInterviewComplete && userMessageCount >= 2;
 
+  // Provenance sources for live-report citations: each transcript line, 1-based.
+  const citationSources: ReportCitationSource[] = chatState.messages.map((m, i) => ({
+    index: i + 1,
+    quote: m.content,
+    isPatient: m.role === 'user',
+  }));
+
+  // A citation click jumps to the source message and flashes it.
+  const handleCitationClick = useCallback((transcriptIndex: number) => {
+    setActiveMobileTab('chat');
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-chat-msg-index="${transcriptIndex}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.remove('demo-msg-flash');
+      void (el as HTMLElement).offsetWidth; // restart the animation
+      el.classList.add('demo-msg-flash');
+      window.setTimeout(() => el.classList.remove('demo-msg-flash'), 2000);
+    });
+  }, []);
+
   // Active suggestion chips
   const activeScenario = DEMO_SCENARIOS.find((s) => s.id === currentScenarioId);
   const currentTurnChips =
@@ -453,6 +475,8 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
             existingReview={clinicianReview}
             onResetReview={() => setClinicianReview(null)}
             onConcludeEarly={canConcludeEarly ? handleConcludeEarly : undefined}
+            citationSources={citationSources}
+            onCitationClick={handleCitationClick}
           />
         </section>
       </div>

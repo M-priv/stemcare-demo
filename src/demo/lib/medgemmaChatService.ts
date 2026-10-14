@@ -115,6 +115,14 @@ interview.
    add assessment conclusions, and never include management or prescribing
    directives.
 8. BREVITY — Every line earns its place: no filler, no pleasantries.
+9. CITATIONS — The transcript lines in <interview_transcript> are numbered
+   ([1], [2], …). After each documented finding, append the marker [[n]]
+   where n is the number of the PATIENT transcript line the fact came from;
+   when a finding combines several answers, append several markers
+   ([[2]][[5]]). Every HPI bullet, Relevant Medical History line, and Red
+   Flags line that documents patient-sourced information must end with at
+   least one marker; placeholder lines ("Not yet discussed") carry none.
+   Never cite a Clinician line. The Summary section carries no markers.
 </rules>
 
 <output_format>
@@ -213,7 +221,7 @@ export function buildReportWriterPrompt(
   presentingComplaint: string,
 ): string {
   const interviewText = transcript
-    .map((msg) => `${msg.role === 'user' ? 'Patient' : 'Clinician'}: ${msg.content}`)
+    .map((msg, i) => `[${i + 1}] ${msg.role === 'user' ? 'Patient' : 'Clinician'}: ${msg.content}`)
     .join('\n');
 
   return `${REPORT_WRITER_SYSTEM_PROMPT}

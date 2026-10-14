@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import type { ClinicalReportSnapshot, DifferentialHypothesis, ClinicianReviewDecision } from '../types';
 import { compileReportToMarkdown } from '../lib/medgemmaEngine';
-import { renderMarkdownToSafeHtml } from '../lib/markdown';
+import { renderReportMarkdownToSafeHtml, type ReportCitationSource } from '../lib/markdown';
 import { DemoClinicianReview } from './DemoClinicianReview';
 
 const CONFIDENCE_LABELS: Record<DifferentialHypothesis['confidenceBucket'], string> = {
@@ -34,6 +34,10 @@ interface DemoReportPanelProps {
   existingReview: ClinicianReviewDecision | null;
   onResetReview: () => void;
   onConcludeEarly?: () => void;
+  /** Numbered transcript lines for provenance citations in the live report. */
+  citationSources?: ReportCitationSource[];
+  /** Fires with the 1-based transcript index when a citation is clicked. */
+  onCitationClick?: (transcriptIndex: number) => void;
 }
 
 export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
@@ -47,6 +51,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   existingReview,
   onResetReview,
   onConcludeEarly,
+  citationSources,
+  onCitationClick,
 }) => {
   const [activeTab, setActiveTab] = useState<'briefing' | 'differentials' | 'review'>('briefing');
   const [copied, setCopied] = useState(false);
@@ -59,8 +65,19 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   }, [report, reportMarkdown]);
 
   const htmlContent = React.useMemo(() => {
-    return renderMarkdownToSafeHtml(markdownContent);
-  }, [markdownContent]);
+    return renderReportMarkdownToSafeHtml(markdownContent, citationSources ?? []);
+  }, [markdownContent, citationSources]);
+
+  const handleContentClick = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!onCitationClick) return;
+      const cite = (event.target as HTMLElement).closest?.('.demo-cite') as HTMLElement | null;
+      if (!cite) return;
+      const index = Number(cite.dataset.msgIndex);
+      if (Number.isFinite(index) && index >= 1) onCitationClick(index);
+    },
+    [onCitationClick],
+  );
 
   const handleCopy = () => {
     navigator.clipboard.writeText(markdownContent);
@@ -147,6 +164,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           <div className="demo-report-briefing animate-fade-in">
             <div
               className="demo-report-prose"
+              onClick={handleContentClick}
               dangerouslySetInnerHTML={{ __html: htmlContent }}
             />
 

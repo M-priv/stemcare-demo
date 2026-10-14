@@ -69,8 +69,8 @@ export const DemoChatArea: React.FC<DemoChatAreaProps> = ({
   return (
     <div className="demo-chat-area">
       <div className="demo-chat-area__messages">
-        {messages.map((message) => (
-          <DemoChatMessage key={message.id} message={message} />
+        {messages.map((message, idx) => (
+          <DemoChatMessage key={message.id} message={message} transcriptIndex={idx + 1} />
         ))}
 
         {isStreaming && (
