@@ -33,6 +33,22 @@ npm run dev
 with mocked model responses, red-flag coverage, per-scenario autoplay
 rehearsals, markdown XSS hardening).
 
+### Live model mode locally
+
+`npm run dev` serves the live path too: a dev-only middleware in
+`vite.config.ts` mirrors the Vercel function at `/api/gemini`. Put your key
+in `.env` (git-ignored — never commit it):
+
+```
+VITE_DEMO_LIVE_MODE="true"
+GEMINI_API_KEY="<your key from aistudio.google.com>"
+```
+
+Then run `npm run dev` and pick a scenario — the header pill should read
+"Live model · Server-proxied". Without a key the endpoint answers
+`{"fallback":true,"reason":"not_configured"}` and the demo stays
+deterministic; a rejected key answers `model_unavailable`.
+
 ## Deploy (Vercel)
 
 Import this repository in Vercel with:
