@@ -5,7 +5,7 @@ import { handleDemoApiRequest } from "./src/demo/lib/liveEngine";
 
 /**
  * Dev-only middleware so live model mode works under plain `npm run dev`.
- * In production Vercel serves `api/gemini.ts` as a serverless function; Vite
+ * In production Vercel serves `api/gemini.js` as a serverless function; Vite
  * has no serverless runtime, so this mirrors it for local development.
  *
  * Reads GEMINI_API_KEY / DEMO_GEMINI_MODEL / DEMO_LIVE_KILL_SWITCH from .env

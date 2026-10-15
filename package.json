@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build:client": "tsc && vite build",
+    "build:server": "esbuild src/server/gemini.ts --bundle --platform=node --format=esm --target=node20 --outfile=api/gemini.js",
+    "build": "npm run build:client && npm run build:server",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -22,6 +24,7 @@
     "@types/react": "^18.3.29",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.2",
+    "esbuild": "^0.28.2",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.13",

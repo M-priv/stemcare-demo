@@ -1,7 +1,8 @@
 /**
  * Live demo engine — server-side core for /api/gemini.
  *
- * This module runs ONLY on the server (imported by `api/gemini.ts`). It is
+ * This module runs ONLY on the server (imported by `src/server/gemini.ts` and
+ * bundled to `api/gemini.js`). It is
  * the single live path for the demo and enforces everything the client
  * cannot be trusted to enforce:
  *

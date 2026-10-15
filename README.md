@@ -57,7 +57,7 @@ Import this repository in Vercel with:
 - Build command: `npm run build`
 - Output directory: `dist`
 
-The `api/gemini.ts` function is auto-detected as a serverless function; the
+The `api/gemini.js` function (bundled from `src/server/gemini.ts`) is auto-detected as a serverless function; the
 SPA fallback rewrite lives in `vercel.json`.
 
 ### Enabling live model mode
@@ -76,8 +76,8 @@ deterministic and never contacts a model provider.
 
 ## Relationship to STEMCare-Landing
 
-This repo carries the demo unchanged (`src/demo/**` and `api/gemini.ts` are
-copied verbatim). The landing repository remains the marketing site and the
+This repo carries the demo (`src/demo/**` and `api/gemini.js` bundled from `src/server/gemini.ts`).
+The landing repository remains the marketing site and the
 upstream source for the demo code; `src/demo.css` here is an extraction of
 the demo styles from the landing's `App.css` (tokens + base typography + the
 full demo section). If the design system or demo engines change upstream,
