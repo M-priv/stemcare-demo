@@ -1160,8 +1160,7 @@ p {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  background: transparent;
   flex-shrink: 0;
 }
 
@@ -1174,9 +1173,6 @@ p {
   border-radius: 9999px;
 ; border: none; box-shadow: none }
 
-:root[data-theme="dark"] .demo-report-panel__tabs {
-  background: rgba(255, 255, 255, 0.06);
-}
 
 .demo-report-panel__tab {
   display: inline-flex;
@@ -3025,4 +3021,16 @@ p {
 .demo-handoff-toast__later:hover {
   color: var(--ink);
   background: rgba(10, 15, 13, 0.05);
+}
+
+/* Opening text of the review: clinical summary + concluded next steps (bold) */
+.demo-review-lead {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+.demo-review-lead strong {
+  font-weight: 700;
 }

@@ -129,3 +129,21 @@ export function extractCitedSummary(report: string): string {
   };
   return [...bullets].sort((a, b) => rank(a) - rank(b)).join('\n');
 }
+
+
+/**
+ * Extract the narrative summary paragraph from a compiled report — the body
+ * of the '## Summary' section, used as the opening text of the clinician
+ * review.
+ */
+export function extractReportSummaryText(report: string): string {
+  const lines = (report ?? '').split('\n');
+  const start = lines.findIndex((l) => l.trim().toLowerCase().startsWith('## summary'));
+  if (start === -1) return '';
+  const body: string[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].trim().startsWith('## ')) break;
+    if (lines[i].trim()) body.push(lines[i].trim());
+  }
+  return body.join(' ');
+}

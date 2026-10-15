@@ -96,22 +96,13 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   return (
     <div className="demo-report-panel">
       {/* Top Inspector Header */}
-      <div className={`demo-report-panel__header ${activeTab === 'review' && reviewFocus ? 'demo-report-panel__header--focus' : ''}`}>
-        {activeTab === 'review' && reviewFocus ? (
-          <button
-            type="button"
-            className="demo-header__back-btn demo-review-back"
-            onClick={() => { setReviewFocus(false); setActiveTab('briefing'); }}
-          >
-            <span>Briefing</span>
-          </button>
-        ) : (
+      <div className="demo-report-panel__header">
         <>
         <div className="demo-report-panel__tabs">
           <button
             type="button"
             className={`demo-report-panel__tab ${activeTab === 'briefing' ? 'demo-report-panel__tab--active' : ''}`}
-            onClick={() => setActiveTab('briefing')}
+            onClick={() => { setActiveTab('briefing'); setReviewFocus(false); }}
           >
             <span>Briefing</span>
           </button>
@@ -140,10 +131,6 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           </button>
         </div>
         </>
-        )}
-        {activeTab === 'review' && reviewFocus && (
-          <span className="demo-review-focus-meta">{reviewMetaLine}</span>
-        )}
       </div>
 
       {/* Content Area */}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { DifferentialHypothesis, ClinicianReviewDecision } from '../types';
 import { suggestTriage, pathwayLabel, type ActionPathway } from '../lib/triageSuggestion';
 import { renderReportMarkdownToSafeHtml, type ReportCitationSource } from '../lib/markdown';
-import { extractCitedSummary } from '../lib/medgemmaEngine';
+import { extractCitedSummary, extractReportSummaryText } from '../lib/medgemmaEngine';
 
 interface DemoClinicianReviewProps {
   hypotheses: DifferentialHypothesis[];
@@ -54,6 +54,11 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
     if (!hpi.trim()) return '';
     return renderReportMarkdownToSafeHtml(hpi, citationSources ?? []);
   }, [reportMarkdown, citationSources]);
+
+  const clinicalSummary = React.useMemo(
+    () => extractReportSummaryText(reportMarkdown || ''),
+    [reportMarkdown],
+  );
 
   const handleSummaryClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onCitationClick) return;
@@ -124,16 +129,19 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   return (
     <div className="demo-clinician-review animate-fade-in">
       <div className="demo-clinician-review__header">
-        <div className="demo-clinician-review__title-row">
-          <h3 className="demo-clinician-review__title">
-            Clinician review{patientName ? `: ${patientName}` : ''}
-          </h3>
-          {!isInterviewComplete && (
-            <span className="demo-clinician-review__prelim-badge">Preliminary</span>
-          )}
-        </div>
         {reviewMeta && (
           <p className="demo-clinician-review__meta-line">{reviewMeta}</p>
+        )}
+        {(clinicalSummary || !hasRedFlag) && (
+          <p className="demo-review-lead">
+            {clinicalSummary}
+            {clinicalSummary ? ' ' : ''}
+            Here's what I concluded we should do:{' '}
+            <strong>{pathwayLabel(finalPathway)}</strong>.
+          </p>
+        )}
+        {!isInterviewComplete && (
+          <p className="demo-clinician-review__meta-line">Preliminary: the interview is still in progress.</p>
         )}
       </div>
 
