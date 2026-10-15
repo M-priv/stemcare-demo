@@ -87,6 +87,10 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   // Custom Case waits for the patient to enter name/age/sex before the
   // interview starts, so the report no longer claims a fictional identity.
   const [awaitingPatientDetails, setAwaitingPatientDetails] = useState(false);
+  // Handoff notification: fades in 5s after the consultation concludes;
+  // clicking it opens the focused review.
+  const [handoffVisible, setHandoffVisible] = useState(false);
+  const [reviewOpenRequests, setReviewOpenRequests] = useState(0);
 
   const isAutoPlayingRef = useRef(false);
   isAutoPlayingRef.current = isAutoPlaying;
@@ -416,6 +420,22 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
     };
   });
 
+  // Schedule the handoff popup 5s after conclusion; clear on any reset.
+  useEffect(() => {
+    if (!isInterviewComplete) {
+      setHandoffVisible(false);
+      return;
+    }
+    const t = window.setTimeout(() => setHandoffVisible(true), 5000);
+    return () => window.clearTimeout(t);
+  }, [isInterviewComplete]);
+
+  const openReviewFromHandoff = useCallback(() => {
+    setHandoffVisible(false);
+    setReviewOpenRequests((n) => n + 1);
+    setActiveMobileTab('report');
+  }, []);
+
   const userMessageCount = chatState.messages.filter((m) => m.role === 'user').length;
 
   // Wrap-Up is only offered once the intake gate is satisfied: HPI core
@@ -561,9 +581,28 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
             onConcludeEarly={canConcludeEarly ? handleConcludeEarly : undefined}
             citationSources={citationSources}
             onCitationClick={handleCitationClick}
+            reviewOpenSignal={reviewOpenRequests}
           />
         </section>
       </div>
+
+      {/* Handoff notification: click opens the focused review */}
+      {handoffVisible && isInterviewComplete && (
+        <div className="demo-handoff-toast animate-handoff-in">
+          <span className="demo-handoff-toast__meta">Consultation finished</span>
+          <span className="demo-handoff-toast__text">
+            {chatState.patientName || 'The patient'}'s briefing and suggested triage are ready for review.
+          </span>
+          <div className="demo-handoff-toast__actions">
+            <button type="button" className="demo-handoff-toast__open" onClick={openReviewFromHandoff}>
+              <span>Open review</span>
+            </button>
+            <button type="button" className="demo-handoff-toast__later" onClick={() => setHandoffVisible(false)}>
+              <span>Later</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Guided Tour Walkthrough Modal */}
       <DemoTourModal

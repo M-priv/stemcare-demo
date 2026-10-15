@@ -45,7 +45,7 @@ export const DemoChatInput: React.FC<DemoChatInputProps> = ({
     return (
       <div className="demo-input-concluded">
         <div className="demo-input-concluded__content">
-          <span>Interview concluded. The briefing and differentials are ready for review.</span>
+          <span>Interview concluded. The review is ready.</span>
         </div>
       </div>
     );

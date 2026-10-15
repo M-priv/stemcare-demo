@@ -104,9 +104,10 @@ expected result**.
    no repeated identical questions, ends with the completion phrase (no
    "End interview." marker visible); briefing updates each turn and every
    finding cites its source chat line.
-4. **Handoff** — After completion → the "Handoff" tab shows a system
-   message ("X just finished their chat with us") with the outcome and an
-   "Open review" button that switches to the Review tab.
+4. **Handoff** — After completion → a small card fades in at the bottom
+   left 5 seconds later: "Consultation finished … ready for review." with
+   "Open review" and "Later". Open review switches to the focused review;
+   Later dismisses. The Review tab remains as the fallback entry.
 5. **Review** — The review is short and cited: a "From the chat" card lists
    the key findings, each with a citation chip (hover shows the verbatim
    chat line, click jumps to the message); below it, "Here's what I

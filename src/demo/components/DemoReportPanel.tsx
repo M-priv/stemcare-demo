@@ -28,6 +28,8 @@ interface DemoReportPanelProps {
   onCitationClick?: (transcriptIndex: number) => void;
   /** Operational context shown on the focused review, e.g. "12:19 · 13 answers · simulated". */
   reviewMeta?: string;
+  /** Increment to open the focused review from outside the panel. */
+  reviewOpenSignal?: number;
 }
 
 export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
@@ -44,8 +46,9 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   citationSources,
   onCitationClick,
   reviewMeta,
+  reviewOpenSignal,
 }) => {
-  const [activeTab, setActiveTab] = useState<'briefing' | 'handoff' | 'review'>('briefing');
+  const [activeTab, setActiveTab] = useState<'briefing' | 'review'>('briefing');
   const [reviewFocus, setReviewFocus] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -81,6 +84,13 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
 
   const hasDifferentials = hypotheses.length > 0;
   const isRedFlagBlocked = Boolean(blockedReason);
+
+  React.useEffect(() => {
+    if (reviewOpenSignal && reviewOpenSignal > 0) {
+      setActiveTab('review');
+      setReviewFocus(true);
+    }
+  }, [reviewOpenSignal]);
   const reviewMetaLine = `${report.lastUpdated} · simulated patient`;
 
   return (
@@ -104,14 +114,6 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             onClick={() => setActiveTab('briefing')}
           >
             <span>Briefing</span>
-          </button>
-
-          <button
-            type="button"
-            className={`demo-report-panel__tab ${activeTab === 'handoff' ? 'demo-report-panel__tab--active' : ''}`}
-            onClick={() => setActiveTab('handoff')}
-          >
-            <span>Handoff</span>
           </button>
 
           <button
@@ -172,51 +174,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                   className="demo-pill-btn demo-pill-btn--primary"
                   onClick={onConcludeEarly}
                 >
-                  <span>Generate differentials</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'handoff' && (
-          <div className="demo-report-handoff animate-fade-in">
-            {isRedFlagBlocked ? (
-              <div className="demo-handoff-card">
-                <span className="demo-handoff-card__meta">System message</span>
-                <p className="demo-handoff-card__text">
-                  The interview was halted by an emergency red flag. Clinical safety
-                  protocol requires immediate escalation rather than routine handoff.
-                </p>
-                <button type="button" className="demo-handoff-card__cta" onClick={() => { setActiveTab('review'); setReviewFocus(true); }}>
-                  <span>Open review</span>
-                </button>
-              </div>
-            ) : isSynthesizingHypotheses ? (
-              <div className="demo-handoff-card">
-                <span className="demo-handoff-card__meta">System message</span>
-                <p className="demo-handoff-card__text">
-                  Compiling the handoff from the finalized interview…
-                </p>
-              </div>
-            ) : !isInterviewComplete ? (
-              <div className="demo-handoff-card">
-                <span className="demo-handoff-card__meta">System message</span>
-                <p className="demo-handoff-card__text">
-                  The interview is still in progress. The handoff appears here once it concludes.
-                </p>
-              </div>
-            ) : (
-              <div className="demo-handoff-card">
-                <span className="demo-handoff-card__meta">System message</span>
-                <p className="demo-handoff-card__text">
-                  <strong>{report.patientName || 'The patient'} just finished their chat with us.</strong>{' '}
-                  Here's the result: the briefing is complete and
-                  {' '}{hypotheses.length} candidate {hypotheses.length === 1 ? 'hypothesis is' : 'hypotheses are'} ready,
-                  with a suggested triage attached.
-                </p>
-                <button type="button" className="demo-handoff-card__cta" onClick={() => { setActiveTab('review'); setReviewFocus(true); }}>
-                  <span>Open review</span>
+                  <span>Conclude interview</span>
                 </button>
               </div>
             )}
@@ -239,7 +197,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                     className="demo-pill-btn demo-pill-btn--primary mt-4"
                     onClick={onConcludeEarly}
                   >
-                    <span>Conclude to unlock</span>
+                    <span>Conclude interview</span>
                   </button>
                 )}
               </div>
