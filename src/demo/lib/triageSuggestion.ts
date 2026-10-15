@@ -36,43 +36,43 @@ export function suggestTriage(
   if (hasRedFlag) {
     return {
       pathway: 'emergency_transfer',
-      reason: 'An emergency red flag was detected during intake; escalation overrides routine disposition.',
+      reason: 'Emergency red flag detected at intake.',
     };
   }
 
   if (!hypothesis) {
     return {
       pathway: 'same_day_gp',
-      reason: 'No differential available; default to prompt in-person assessment.',
+      reason: 'No differential available; defaulting to prompt in-person assessment.',
     };
   }
 
   const action = hypothesis.recommendedAction.toLowerCase();
   const bucket = hypothesis.confidenceBucket;
-  const label = PATHWAY_LABELS;
+  const grounding = `${hypothesis.condition}, ${bucket} plausibility`;
 
   if (/\b(emergency|999|a&e|immediate (?:escalation|transfer))\b/.test(action)) {
     return {
       pathway: 'emergency_transfer',
-      reason: `Primary hypothesis "${hypothesis.condition}" (${bucket} plausibility) carries an emergency escalation instruction.`,
+      reason: `${grounding}; the recommended action calls for escalation.`,
     };
   }
-  if (/\b(same.?day|urgent|prompt|priority| expedite)/i.test(action)) {
+  if (/\b(same.?day|urgent|prompt|priority|expedite)\b/.test(action)) {
     return {
       pathway: 'same_day_gp',
-      reason: `Recommended action for "${hypothesis.condition}" (${bucket} plausibility) asks for prompt in-person review.`,
+      reason: `${grounding}; the recommended action flags urgency.`,
     };
   }
   if (/\b(referral|refer|specialist|secondary care)\b/.test(action)) {
     return {
       pathway: 'specialist_referral',
-      reason: `Recommended action for "${hypothesis.condition}" (${bucket} plausibility) points to specialist input.`,
+      reason: `${grounding}; specialist input is recommended.`,
     };
   }
   if (/\b(self.?care|safety.?net|advice only|no treatment)\b/.test(action)) {
     return {
       pathway: 'self_care_safety_net',
-      reason: `Recommended action for "${hypothesis.condition}" (${bucket} plausibility) supports advice with safety-netting.`,
+      reason: `${grounding}; advised management with safety-netting fits.`,
     };
   }
 
@@ -81,12 +81,12 @@ export function suggestTriage(
   if (bucket === 'high') {
     return {
       pathway: 'same_day_gp',
-      reason: `Top hypothesis "${hypothesis.condition}" is high plausibility; prompt review avoids delay while the picture is active.`,
+      reason: `${grounding}; review before the picture changes.`,
     };
   }
   return {
     pathway: 'routine_gp',
-    reason: `Top hypothesis "${hypothesis.condition}" is ${bucket} plausibility with no urgency markers; routine review is appropriate.`,
+    reason: `${grounding}; no urgency markers in the intake.`,
   };
 }
 

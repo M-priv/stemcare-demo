@@ -105,8 +105,27 @@ export function extractCitedSummary(report: string): string {
       break;
     }
   }
-  return lines
-    .slice(start + 1, end)
-    .filter((l) => l.trim().startsWith('-'))
-    .join('\n');
+
+  // Clinicians skim rule-outs first, then severity and modifiers. Emit rows
+  // in review order; rows outside the known order keep their sequence at the
+  // end.
+  const reviewOrder = [
+    'Pertinent Negatives',
+    'Severity',
+    'Modifying Factors',
+    'Onset & Duration',
+    'Onset',
+    'Duration',
+    'Location',
+    'Character/Quality',
+    'Timing',
+    'Associated Symptoms',
+    'Interventions Tried',
+  ];
+  const bullets = lines.slice(start + 1, end).filter((l) => l.trim().startsWith('-'));
+  const rank = (l: string) => {
+    const idx = reviewOrder.findIndex((label) => l.includes(`**${label}**`));
+    return idx === -1 ? reviewOrder.length : idx;
+  };
+  return [...bullets].sort((a, b) => rank(a) - rank(b)).join('\n');
 }

@@ -26,6 +26,8 @@ interface DemoReportPanelProps {
   citationSources?: ReportCitationSource[];
   /** Fires with the 1-based transcript index when a citation is clicked. */
   onCitationClick?: (transcriptIndex: number) => void;
+  /** Operational context shown on the focused review, e.g. "12:19 · 13 answers · simulated". */
+  reviewMeta?: string;
 }
 
 export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
@@ -41,8 +43,10 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   onConcludeEarly,
   citationSources,
   onCitationClick,
+  reviewMeta,
 }) => {
-  const [activeTab, setActiveTab] = useState<'briefing' | 'differentials' | 'review'>('briefing');
+  const [activeTab, setActiveTab] = useState<'briefing' | 'handoff' | 'review'>('briefing');
+  const [reviewFocus, setReviewFocus] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const markdownContent = React.useMemo(() => {
@@ -77,11 +81,22 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
 
   const hasDifferentials = hypotheses.length > 0;
   const isRedFlagBlocked = Boolean(blockedReason);
+  const reviewMetaLine = `${report.lastUpdated} · simulated patient`;
 
   return (
     <div className="demo-report-panel">
       {/* Top Inspector Header */}
-      <div className="demo-report-panel__header">
+      <div className={`demo-report-panel__header ${activeTab === 'review' && reviewFocus ? 'demo-report-panel__header--focus' : ''}`}>
+        {activeTab === 'review' && reviewFocus ? (
+          <button
+            type="button"
+            className="demo-header__back-btn demo-review-back"
+            onClick={() => { setReviewFocus(false); setActiveTab('briefing'); }}
+          >
+            <span>Briefing</span>
+          </button>
+        ) : (
+        <>
         <div className="demo-report-panel__tabs">
           <button
             type="button"
@@ -93,8 +108,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
 
           <button
             type="button"
-            className={`demo-report-panel__tab ${activeTab === 'differentials' ? 'demo-report-panel__tab--active' : ''}`}
-            onClick={() => setActiveTab('differentials')}
+            className={`demo-report-panel__tab ${activeTab === 'handoff' ? 'demo-report-panel__tab--active' : ''}`}
+            onClick={() => setActiveTab('handoff')}
           >
             <span>Handoff</span>
           </button>
@@ -102,7 +117,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           <button
             type="button"
             className={`demo-report-panel__tab ${activeTab === 'review' ? 'demo-report-panel__tab--active' : ''}`}
-            onClick={() => setActiveTab('review')}
+            onClick={() => { setActiveTab('review'); setReviewFocus(true); }}
           >
             <span>Review</span>
             {existingReview ? (
@@ -122,6 +137,11 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
             <span className="hidden-mobile">{copied ? 'Copied' : 'Copy'}</span>
           </button>
         </div>
+        </>
+        )}
+        {activeTab === 'review' && reviewFocus && (
+          <span className="demo-review-focus-meta">{reviewMetaLine}</span>
+        )}
       </div>
 
       {/* Content Area */}
@@ -159,7 +179,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
           </div>
         )}
 
-        {activeTab === 'differentials' && (
+        {activeTab === 'handoff' && (
           <div className="demo-report-handoff animate-fade-in">
             {isRedFlagBlocked ? (
               <div className="demo-handoff-card">
@@ -168,7 +188,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                   The interview was halted by an emergency red flag. Clinical safety
                   protocol requires immediate escalation rather than routine handoff.
                 </p>
-                <button type="button" className="demo-handoff-card__cta" onClick={() => setActiveTab('review')}>
+                <button type="button" className="demo-handoff-card__cta" onClick={() => { setActiveTab('review'); setReviewFocus(true); }}>
                   <span>Open review</span>
                 </button>
               </div>
@@ -195,7 +215,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                   {' '}{hypotheses.length} candidate {hypotheses.length === 1 ? 'hypothesis is' : 'hypotheses are'} ready,
                   with a suggested triage attached.
                 </p>
-                <button type="button" className="demo-handoff-card__cta" onClick={() => setActiveTab('review')}>
+                <button type="button" className="demo-handoff-card__cta" onClick={() => { setActiveTab('review'); setReviewFocus(true); }}>
                   <span>Open review</span>
                 </button>
               </div>
@@ -204,7 +224,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
         )}
 
         {activeTab === 'review' && (
-          <div className="demo-report-review animate-fade-in">
+          <div className={`demo-report-review animate-fade-in ${reviewFocus ? 'demo-report-review--focus' : ''}`}>
             {!isInterviewComplete && !hasDifferentials ? (
               <div className="demo-diff-empty-state">
                 <h4 className="font-semibold text-sm text-foreground">

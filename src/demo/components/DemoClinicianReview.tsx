@@ -11,6 +11,8 @@ interface DemoClinicianReviewProps {
   existingReview: ClinicianReviewDecision | null;
   onResetReview: () => void;
   patientName?: string;
+  /** Operational context line, e.g. "12:19 · 13 answers · simulated". */
+  reviewMeta?: string;
   /** Compiled briefing markdown; its cited HPI lines form the review summary. */
   reportMarkdown?: string;
   citationSources?: ReportCitationSource[];
@@ -35,6 +37,7 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   reportMarkdown,
   citationSources,
   onCitationClick,
+  reviewMeta,
 }) => {
   const [mode, setMode] = useState<'conclude' | 'edit'>('conclude');
   const [editedPathway, setEditedPathway] = useState<ActionPathway | null>(null);
@@ -129,6 +132,9 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
             <span className="demo-clinician-review__prelim-badge">Preliminary</span>
           )}
         </div>
+        {reviewMeta && (
+          <p className="demo-clinician-review__meta-line">{reviewMeta}</p>
+        )}
       </div>
 
       {/* Summary of the relevant chat info, with citations back to the transcript */}
@@ -152,12 +158,14 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
 
       {/* Conclusion + approve/edit */}
       <div className="demo-review-conclusion">
-        <p className="demo-review-conclusion__lead">Here's what I concluded we should do:</p>
+        <p className="demo-review-conclusion__lead">
+          Here's what I concluded we should do:
+        </p>
         <p className="demo-review-conclusion__pathway">{pathwayLabel(finalPathway)}</p>
         <p className="demo-review-conclusion__reason">{suggestion.reason}</p>
         {isModified && (
           <p className="demo-review-conclusion__edited">
-            Edited from the suggested {pathwayLabel(suggestion.pathway)}.
+            Edited; suggested {pathwayLabel(suggestion.pathway)}.
           </p>
         )}
 
