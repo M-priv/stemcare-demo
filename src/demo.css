@@ -922,7 +922,7 @@ p {
   padding: 0.9rem 1.15rem;
   border-radius: 24px 24px 24px 6px;
   background: var(--surface-elevated);
-  border: 1px solid var(--line);
+  border: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   color: var(--ink);
   font-size: 0.9rem;
@@ -933,7 +933,7 @@ p {
   border-radius: 24px 24px 6px 24px;
   background: var(--brand-blue);
   color: #ffffff;
-  border-color: transparent;
+  border: none;
 }
 
 /* The base `p` element rule sets color: var(--ink), which overrides
@@ -945,12 +945,12 @@ p {
 
 :root[data-theme="dark"] .demo-msg--user .demo-msg__bubble {
   background: #1b3a2b;
-  border: 1px solid rgba(61, 163, 116, 0.3);
+  border: none;
 }
 
 .demo-msg--red-flag .demo-msg__bubble {
   background: rgba(220, 38, 38, 0.06);
-  border: 1px solid rgba(220, 38, 38, 0.3);
+  border: none;
   color: var(--ink);
 }
 
