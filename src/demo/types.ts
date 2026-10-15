@@ -101,3 +101,31 @@ export interface ClinicalReportSnapshot {
   lastUpdated: string;
   isFinalized: boolean;
 }
+
+export type EvaluatorRole =
+  | 'clinician_gp'
+  | 'nhs_leader'
+  | 'healthtech_product'
+  | 'patient_public'
+  | 'investor_partner'
+  | 'other';
+
+export type PillarScore = 'excellent' | 'adequate' | 'needs_work';
+
+export interface DemoSurveyResponse {
+  overallRating: number; // 1 to 10
+  evaluatorRole: EvaluatorRole;
+  evaluatorRoleOther?: string;
+  feelings: string[];
+  pillarRatings: {
+    patientInterview?: PillarScore;
+    clinicalBriefing?: PillarScore;
+    clinicianGate?: PillarScore;
+  };
+  positiveFeedback: string;
+  constructiveFeedback: string;
+  contactName?: string;
+  contactEmail?: string;
+  submittedAt: string;
+  scenarioId?: string;
+}

@@ -38,6 +38,8 @@ import { DemoChatInput } from './components/DemoChatInput';
 import { DemoPatientDetails } from './components/DemoPatientDetails';
 import { DemoReportPanel } from './components/DemoReportPanel';
 import { DemoTourModal } from './components/DemoTourModal';
+import { DemoSurveyModal } from './components/DemoSurveyModal';
+import { loadSurveyResponse } from './lib/surveyStorage';
 
 interface MedGemmaDemoPageProps {
   onBackToLanding: () => void;
@@ -91,6 +93,8 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   // clicking it opens the focused review.
   const [handoffVisible, setHandoffVisible] = useState(false);
   const [reviewOpenRequests, setReviewOpenRequests] = useState(0);
+  const [isSurveyOpen, setIsSurveyOpen] = useState(false);
+  const [hasSurveySubmitted, setHasSurveySubmitted] = useState<boolean>(() => loadSurveyResponse() !== null);
 
   const isAutoPlayingRef = useRef(false);
   isAutoPlayingRef.current = isAutoPlaying;
@@ -524,6 +528,8 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
         onThemeToggle={onThemeToggle}
         activeTab={activeMobileTab}
         onTabChange={setActiveMobileTab}
+        onOpenSurvey={() => setIsSurveyOpen(true)}
+        hasSurveySubmitted={hasSurveySubmitted}
       />
 
       <div className="demo-workspace">
@@ -575,13 +581,21 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
             isInterviewComplete={isInterviewComplete}
             isSynthesizingHypotheses={isSynthesizingHypotheses}
             blockedReason={blockedReason}
-            onReviewSubmitted={(decision) => setClinicianReview(decision)}
+            onReviewSubmitted={(decision) => {
+              setClinicianReview(decision);
+              // Open survey automatically shortly after submission so the user can rate their experience
+              window.setTimeout(() => {
+                setIsSurveyOpen(true);
+              }, 850);
+            }}
             existingReview={clinicianReview}
             onResetReview={() => setClinicianReview(null)}
             onConcludeEarly={canConcludeEarly ? handleConcludeEarly : undefined}
             citationSources={citationSources}
             onCitationClick={handleCitationClick}
             reviewOpenSignal={reviewOpenRequests}
+            onOpenSurvey={() => setIsSurveyOpen(true)}
+            hasSurveySubmitted={hasSurveySubmitted}
           />
         </section>
       </div>
@@ -608,6 +622,14 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
       <DemoTourModal
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
+      />
+
+      {/* Demo Experience Survey Modal */}
+      <DemoSurveyModal
+        isOpen={isSurveyOpen}
+        onClose={() => setIsSurveyOpen(false)}
+        scenarioId={currentScenarioId}
+        onSubmitted={() => setHasSurveySubmitted(true)}
       />
     </div>
   );

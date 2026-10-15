@@ -17,6 +17,8 @@ interface DemoClinicianReviewProps {
   reportMarkdown?: string;
   citationSources?: ReportCitationSource[];
   onCitationClick?: (transcriptIndex: number) => void;
+  onOpenSurvey?: () => void;
+  hasSurveySubmitted?: boolean;
 }
 
 const DISPOSITIONS: Array<{ id: ActionPathway; label: string; desc: string }> = [
@@ -38,6 +40,8 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
   citationSources,
   onCitationClick,
   reviewMeta,
+  onOpenSurvey,
+  hasSurveySubmitted,
 }) => {
   const [mode, setMode] = useState<'conclude' | 'edit'>('conclude');
   const [editedPathway, setEditedPathway] = useState<ActionPathway | null>(null);
@@ -114,6 +118,30 @@ export const DemoClinicianReview: React.FC<DemoClinicianReviewProps> = ({
                 Demo review record — the production system records a clinician decision with a cryptographic audit receipt.
               </span>
             </div>
+
+            {/* Post-submission Survey Prompt */}
+            {onOpenSurvey && (
+              <div className="demo-review-signed__survey-prompt">
+                <div className="demo-review-signed__survey-content">
+                  <span className="demo-review-signed__survey-badge">Demo Evaluation</span>
+                  <h4 className="demo-review-signed__survey-title">
+                    {hasSurveySubmitted ? 'Thank you for your feedback!' : 'How was your experience?'}
+                  </h4>
+                  <p className="demo-review-signed__survey-desc">
+                    {hasSurveySubmitted
+                      ? 'Your rating and feedback are saved. You can review or adjust your submission anytime.'
+                      : 'Rate this pre-consultation workflow out of 10 and describe how the safety, citations, and clinician gate felt.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="demo-pill-btn demo-pill-btn--primary demo-review-signed__survey-cta"
+                  onClick={onOpenSurvey}
+                >
+                  <span>{hasSurveySubmitted ? 'View / Edit Feedback' : 'Rate Demo (1–10)'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <button type="button" className="demo-review-signed__edit-btn" onClick={onResetReview}>

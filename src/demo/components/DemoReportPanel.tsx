@@ -30,6 +30,8 @@ interface DemoReportPanelProps {
   reviewMeta?: string;
   /** Increment to open the focused review from outside the panel. */
   reviewOpenSignal?: number;
+  onOpenSurvey?: () => void;
+  hasSurveySubmitted?: boolean;
 }
 
 export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
@@ -47,6 +49,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
   onCitationClick,
   reviewMeta,
   reviewOpenSignal,
+  onOpenSurvey,
+  hasSurveySubmitted,
 }) => {
   const [activeTab, setActiveTab] = useState<'briefing' | 'review'>('briefing');
   const [reviewFocus, setReviewFocus] = useState(false);
@@ -199,6 +203,8 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
                 reportMarkdown={markdownContent}
                 citationSources={citationSources}
                 onCitationClick={onCitationClick}
+                onOpenSurvey={onOpenSurvey}
+                hasSurveySubmitted={hasSurveySubmitted}
               />
             )}
           </div>

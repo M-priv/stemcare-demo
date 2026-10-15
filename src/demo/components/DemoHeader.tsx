@@ -16,6 +16,8 @@ interface DemoHeaderProps {
   onThemeToggle: () => void;
   activeTab: 'chat' | 'report' | 'review';
   onTabChange: (tab: 'chat' | 'report' | 'review') => void;
+  onOpenSurvey?: () => void;
+  hasSurveySubmitted?: boolean;
 }
 
 export const DemoHeader: React.FC<DemoHeaderProps> = ({
@@ -31,6 +33,8 @@ export const DemoHeader: React.FC<DemoHeaderProps> = ({
   onThemeToggle,
   activeTab,
   onTabChange,
+  onOpenSurvey,
+  hasSurveySubmitted,
 }) => {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const currentScenario = DEMO_SCENARIOS.find((s) => s.id === currentScenarioId);
@@ -121,6 +125,17 @@ export const DemoHeader: React.FC<DemoHeaderProps> = ({
             <button type="button" className="demo-pill-btn demo-pill-btn--tour" onClick={onOpenTour}>
               <span>Tour</span>
             </button>
+
+            {onOpenSurvey && (
+              <button
+                type="button"
+                className={`demo-pill-btn demo-pill-btn--survey ${hasSurveySubmitted ? 'demo-pill-btn--survey-done' : ''}`}
+                onClick={onOpenSurvey}
+                title="Rate and evaluate demo (1–10)"
+              >
+                <span>{hasSurveySubmitted ? 'Feedback ✓' : 'Feedback (1–10)'}</span>
+              </button>
+            )}
 
             {!isInterviewComplete && currentScenarioId !== 'custom' && (
               <button
