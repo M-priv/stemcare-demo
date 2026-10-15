@@ -23,11 +23,9 @@ marketing landing page lives at https://stemcare.co.uk/ and the header's
     proxy** (`/api/gemini`). The API key never reaches the browser, prompts
     are built server-side, every model response passes the assistive-only
     policy gate on the server *and* the client, and any failure falls back
-    silently to the deterministic engine. One nuance: once a live briefing
-    has been produced, an isolated live-report failure keeps the existing
-    live briefing for that turn (the newest answer syncs on the next
-    successful update) rather than visibly downgrading it mid-interview.
-    In this mode text you type is sent to our server and processed by Google.
+    silently to the deterministic engine, which always reflects the latest
+    answers. In this mode text you type is sent to our server and processed
+    by Google.
 - **No persistence.** Nothing typed is stored anywhere; closing the tab
   discards everything.
 

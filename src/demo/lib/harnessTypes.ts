@@ -72,8 +72,6 @@ export interface MedGemmaChatState {
   presentingComplaint: string;
   messages: MedGemmaChatMessage[];
   report: string;
-  /** True once a live model report has been accepted for this session. */
-  liveReportActive?: boolean;
   hasRedFlag: boolean;
   redFlagReason?: string;
   exchangeCount: number;

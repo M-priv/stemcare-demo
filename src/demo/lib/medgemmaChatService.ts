@@ -110,6 +110,13 @@ interview.
    Modifying Factors, Associated Symptoms, Pertinent Negatives. If a
    dimension has not been covered yet, keep its "Not yet discussed"
    placeholder rather than inventing content.
+5b. MEDICAL HISTORY — Scan the WHOLE transcript for the patient's
+   statements about medical conditions, regular medications, allergies,
+   and family or social history. Fill the matching Relevant Medical
+   History rows from those statements, each with its citation marker.
+   Keep "Not yet discussed" on a row ONLY when the transcript contains no
+   statement about it — never because the row was empty in
+   <current_report>.
 6. PERTINENT NEGATIVES — Record denied symptoms once, as "Denies …", under
    Pertinent Negatives only.
 7. ASSISTIVE ONLY — Document findings only. Never assert a diagnosis, never
@@ -466,10 +473,11 @@ export async function processPatientMessage(
     }
   }
 
-  // On a live failure, keep the accumulated live report rather than
-  // overwriting it with the deterministic skeleton — a mid-interview 503
-  // must not visibly downgrade the briefing the audience is reading.
-  if (!liveReportAccepted && !state.liveReportActive) {
+  // On a live failure, rebuild from the deterministic compiler: it emits
+  // the same canonical skeleton with citations and always reflects the
+  // latest answers (the history block especially must never stay frozen
+  // at placeholders because one report call failed).
+  if (!liveReportAccepted) {
     updatedReportText = buildDeterministicReport({
       policy: updatedPolicy,
       patientName: state.patientName,
@@ -485,7 +493,6 @@ export async function processPatientMessage(
       presentingComplaint: effectiveComplaint,
       messages: fullTranscript,
       report: updatedReportText,
-      liveReportActive: liveReportAccepted || state.liveReportActive,
       exchangeCount: state.exchangeCount + 1,
       interviewPolicy: {
         ...updatedPolicy,
