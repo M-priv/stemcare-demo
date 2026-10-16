@@ -65,7 +65,7 @@ export const DemoHeader: React.FC<DemoHeaderProps> = ({
 
         {/* Center: scenario selector and interview controls */}
         <div className="demo-header__controls">
-          <div className="demo-header__scenario-selector">
+          <div className="demo-header__scenario-selector" data-tour="scenario-selector">
             <button
               type="button"
               className="demo-header__scenario-btn"
@@ -121,8 +121,8 @@ export const DemoHeader: React.FC<DemoHeaderProps> = ({
             )}
           </div>
 
-          <div className="demo-header__action-pills">
-            <button type="button" className="demo-pill-btn demo-pill-btn--tour" onClick={onOpenTour}>
+          <div className="demo-header__action-pills" data-tour="action-pills">
+            <button type="button" className="demo-pill-btn demo-pill-btn--tour" data-tour="tour-btn" onClick={onOpenTour}>
               <span>Tour</span>
             </button>
 
@@ -141,13 +141,14 @@ export const DemoHeader: React.FC<DemoHeaderProps> = ({
               <button
                 type="button"
                 className={`demo-pill-btn ${isAutoPlaying ? 'demo-pill-btn--active' : ''}`}
+                data-tour="autoplay-btn"
                 onClick={onAutoPlay}
               >
                 <span>{isAutoPlaying ? 'Stop' : 'Auto-play'}</span>
               </button>
             )}
 
-            <button type="button" className="demo-pill-btn demo-pill-btn--ghost" onClick={onReset}>
+            <button type="button" className="demo-pill-btn demo-pill-btn--ghost" data-tour="reset-btn" onClick={onReset}>
               <span>Reset</span>
             </button>
           </div>

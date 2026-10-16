@@ -40,6 +40,7 @@ import { DemoReportPanel } from './components/DemoReportPanel';
 import { DemoTourModal } from './components/DemoTourModal';
 import { DemoSurveyModal } from './components/DemoSurveyModal';
 import { loadSurveyResponse } from './lib/surveyStorage';
+import { shouldShowTourOnStartup } from './lib/tourStorage';
 
 interface MedGemmaDemoPageProps {
   onBackToLanding: () => void;
@@ -85,7 +86,7 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   const [isInterviewComplete, setIsInterviewComplete] = useState(false);
   const [clinicianReview, setClinicianReview] = useState<ClinicianReviewDecision | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'report' | 'review'>('chat');
-  const [isTourOpen, setIsTourOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(() => shouldShowTourOnStartup());
   // Custom Case waits for the patient to enter name/age/sex before the
   // interview starts, so the report no longer claims a fictional identity.
   const [awaitingPatientDetails, setAwaitingPatientDetails] = useState(false);
@@ -538,6 +539,7 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
           className={`demo-pane demo-pane--chat ${
             activeMobileTab === 'chat' ? 'demo-pane--mobile-active' : ''
           }`}
+          data-tour="chat-pane"
           aria-label="Patient consultation chat"
         >
           <div className="demo-pane__scroll-container">
@@ -572,6 +574,7 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
               ? 'demo-pane--mobile-active'
               : ''
           }`}
+          data-tour="report-pane"
           aria-label="Clinical briefing and clinician decision gate"
         >
           <DemoReportPanel
@@ -622,6 +625,8 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
       <DemoTourModal
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
+        activeMobileTab={activeMobileTab}
+        onMobileTabChange={setActiveMobileTab}
       />
 
       {/* Demo Experience Survey Modal */}

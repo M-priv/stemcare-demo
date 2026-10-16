@@ -102,7 +102,7 @@ export const DemoReportPanel: React.FC<DemoReportPanelProps> = ({
       {/* Top Inspector Header */}
       <div className="demo-report-panel__header">
         <>
-        <div className="demo-report-panel__tabs">
+        <div className="demo-report-panel__tabs" data-tour="clinician-tabs">
           <button
             type="button"
             className={`demo-report-panel__tab ${activeTab === 'briefing' ? 'demo-report-panel__tab--active' : ''}`}
