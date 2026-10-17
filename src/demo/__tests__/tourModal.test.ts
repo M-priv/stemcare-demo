@@ -51,12 +51,11 @@ describe('Tour Slides Content & Structure', () => {
     expect(TOUR_SLIDES.map((s) => s.id)).toEqual(expectedIds);
   });
 
-  it('every slide contains valid titles, subtitles, clinician context, and key points', () => {
+  it('every slide contains valid titles, subtitles, and key points', () => {
     TOUR_SLIDES.forEach((slide, idx) => {
       expect(slide.id).toBeTruthy();
       expect(slide.title.length).toBeGreaterThan(3);
       expect(slide.subtitle.length).toBeGreaterThan(5);
-      expect(slide.clinicianNote.length).toBeGreaterThan(10);
       expect(slide.points.length).toBeGreaterThanOrEqual(2);
       expect(slide.badge).toContain(`${idx + 1} of 8`);
     });

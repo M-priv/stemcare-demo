@@ -21,7 +21,6 @@ export interface TourStep {
   title: string;
   subtitle: string;
   points: string[];
-  clinicianNote: string;
   targetSelector: string;
   placement: 'center' | 'bottom' | 'right' | 'left';
   mobileTab?: 'chat' | 'report' | 'review';
@@ -38,7 +37,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Drafts an audit-ready clinical note in real time.',
       'You stay in full control. The system never diagnoses on its own.',
     ],
-    clinicianNote: 'Built to save consultation time so you can focus on the patient.',
     targetSelector: '',
     placement: 'center',
     mobileTab: 'chat',
@@ -54,7 +52,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Malaria: fever following tropical travel.',
       'Serotonin Syndrome: medication interaction emergency.',
     ],
-    clinicianNote: 'Click the case dropdown in the header to switch cases anytime.',
     targetSelector: '[data-tour="scenario-selector"]',
     placement: 'bottom',
     mobileTab: 'chat',
@@ -69,7 +66,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Enter any patient details (name, age, sex).',
       'Type any symptom narrative or pick a starter prompt to see how the intake adapts.',
     ],
-    clinicianNote: 'Try challenging presentations or subtle red flags.',
     targetSelector: '[data-tour="scenario-selector"]',
     placement: 'bottom',
     mobileTab: 'chat',
@@ -84,7 +80,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Watch a complete 5-turn consultation finish in under 60 seconds.',
       'Click Stop anytime to take over and type your own replies.',
     ],
-    clinicianNote: 'Perfect for a quick, hands-free overview of the workflow.',
     targetSelector: '[data-tour="autoplay-btn"], [data-tour="action-pills"]',
     placement: 'bottom',
     mobileTab: 'chat',
@@ -99,7 +94,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Test different patient answers or explore alternative pathways.',
       'Your selected scenario remains loaded.',
     ],
-    clinicianNote: 'Useful for re-testing edge cases or presenting to colleagues.',
     targetSelector: '[data-tour="reset-btn"], [data-tour="action-pills"]',
     placement: 'bottom',
     mobileTab: 'chat',
@@ -114,7 +108,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Gathers onset, severity, modifiers, medications, and past history.',
       'Checks every answer locally against NHS red-flag rules.',
     ],
-    clinicianNote: 'Red flags trigger safety advice immediately.',
     targetSelector: '[data-tour="chat-pane"]',
     placement: 'right',
     mobileTab: 'chat',
@@ -129,7 +122,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'Clickable citations like [1] and [2] highlight the exact source message.',
       'Full provenance: verify any clinical claim with one click.',
     ],
-    clinicianNote: 'Zero guesswork. Every note statement is tied to patient evidence.',
     targetSelector: '[data-tour="report-pane"]',
     placement: 'left',
     mobileTab: 'report',
@@ -144,7 +136,6 @@ export const TOUR_SLIDES: TourStep[] = [
       'You approve, edit, or override the recommendation.',
       'Sign off with a timestamped digital receipt.',
     ],
-    clinicianNote: 'STEMCare assists; the clinician always decides.',
     targetSelector: '[data-tour="clinician-tabs"], [data-tour="report-pane"]',
     placement: 'left',
     mobileTab: 'report',
@@ -159,7 +150,7 @@ interface DemoTourModalProps {
 }
 
 const CARD_WIDTH = 380;
-const CARD_HEIGHT_ESTIMATE = 370;
+const CARD_HEIGHT_ESTIMATE = 300;
 const EDGE = 16;
 
 const STEP_ICONS: Record<string, React.ReactNode> = {
@@ -370,11 +361,6 @@ export const DemoTourModal: React.FC<DemoTourModalProps> = ({
                 <span className="demo-walkthrough__point-text">{pt}</span>
               </div>
             ))}
-          </div>
-
-          <div className="demo-walkthrough__note">
-            <span className="demo-walkthrough__note-label">Clinical Context</span>
-            <p className="demo-walkthrough__note-body">{slide.clinicianNote}</p>
           </div>
         </div>
 
