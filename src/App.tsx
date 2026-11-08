@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { MedGemmaDemoPage } from "./demo/MedGemmaDemoPage";
 
 type ThemeMode = "light" | "dark";
@@ -30,13 +31,16 @@ function App() {
   }, [theme]);
 
   return (
-    <MedGemmaDemoPage
-      onBackToLanding={() => {
-        window.location.href = LANDING_URL;
-      }}
-      theme={theme}
-      onThemeToggle={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-    />
+    <>
+      <MedGemmaDemoPage
+        onBackToLanding={() => {
+          window.location.href = LANDING_URL;
+        }}
+        theme={theme}
+        onThemeToggle={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+      />
+      <Analytics />
+    </>
   );
 }
 
