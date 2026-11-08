@@ -55,6 +55,7 @@ function demoLiveApi(): Plugin {
           }
           const result = await handleSurveyApiRequest(body, {
             webhookUrl: env.SURVEY_WEBHOOK_URL || undefined,
+            postgresUrl: env.POSTGRES_URL || env.DATABASE_URL || undefined,
           });
           res.statusCode = result.status;
           res.setHeader("Content-Type", "application/json");

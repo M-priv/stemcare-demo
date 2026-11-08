@@ -247,19 +247,80 @@ describe('handleSurveyApiRequest (Serverless route logic)', () => {
     expect(resNonNum.status).toBe(400);
   });
 
-  it('returns local_only mode when SURVEY_WEBHOOK_URL is not configured', async () => {
+  it('returns local_only mode when neither POSTGRES_URL nor SURVEY_WEBHOOK_URL is configured', async () => {
     const { handleSurveyApiRequest } = await import('../../server/survey');
     const result = await handleSurveyApiRequest(
       { overallRating: 9, evaluatorRole: 'clinician_gp' },
-      { webhookUrl: '' }
+      { webhookUrl: '', postgresUrl: '' }
     );
 
     expect(result.status).toBe(200);
     expect(result.body.forwarded).toBe(false);
     expect(result.body.mode).toBe('local_only');
+    expect(result.body.message).toContain('Configure POSTGRES_URL');
   });
 
-  it('forwards payload to Google Sheets webhook when SURVEY_WEBHOOK_URL is set', async () => {
+  it('saves payload to Vercel Postgres when sqlClient / postgresUrl is configured', async () => {
+    const { handleSurveyApiRequest, resetTableBootstrap } = await import('../../server/survey');
+    resetTableBootstrap();
+
+    const mockQueries: string[] = [];
+    const mockSqlClient = vi.fn().mockImplementation((strings: TemplateStringsArray) => {
+      mockQueries.push(strings.join(' '));
+      return Promise.resolve([]);
+    });
+
+    const payload = {
+      overallRating: 9,
+      ratingLabel: 'Excellent / Near clinic-ready',
+      evaluatorRole: 'clinician_gp',
+      feelings: ['safe_grounded', 'apple_design'],
+      pillarRatings: { patientInterview: 'excellent', clinicalBriefing: 'good' },
+      positiveFeedback: 'Intuitive interface',
+      constructiveFeedback: 'None',
+      contactName: 'Dr. Watson',
+      contactEmail: 'watson@nhs.net',
+      scenarioId: 'migraine_aura',
+      submittedAt: '16:00',
+    };
+
+    const result = await handleSurveyApiRequest(payload, {
+      postgresUrl: 'postgres://test:test@neon.tech/test',
+      sqlClient: mockSqlClient,
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body.forwarded).toBe(true);
+    expect(result.body.mode).toBe('postgres');
+    expect(result.body.message).toContain('Successfully saved survey response to Vercel Postgres');
+
+    // Verify both CREATE TABLE and INSERT were called
+    expect(mockSqlClient).toHaveBeenCalledTimes(2);
+    expect(mockQueries[0]).toContain('CREATE TABLE IF NOT EXISTS demo_survey_responses');
+    expect(mockQueries[1]).toContain('INSERT INTO demo_survey_responses');
+  });
+
+  it('handles Postgres execution failure gracefully with 500 error', async () => {
+    const { handleSurveyApiRequest, resetTableBootstrap } = await import('../../server/survey');
+    resetTableBootstrap();
+
+    const mockSqlClient = vi.fn().mockRejectedValue(new Error('Postgres connection timeout'));
+
+    const result = await handleSurveyApiRequest(
+      { overallRating: 8, evaluatorRole: 'clinician_gp' },
+      {
+        postgresUrl: 'postgres://test:test@neon.tech/test',
+        sqlClient: mockSqlClient,
+      }
+    );
+
+    expect(result.status).toBe(500);
+    expect(result.body.status).toBe('error');
+    expect(result.body.forwarded).toBe(false);
+    expect(result.body.message).toContain('Failed to save survey to Vercel Postgres: Postgres connection timeout');
+  });
+
+  it('forwards payload to Google Sheets webhook when SURVEY_WEBHOOK_URL is set and no Postgres URL is provided', async () => {
     const { handleSurveyApiRequest } = await import('../../server/survey');
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -275,6 +336,7 @@ describe('handleSurveyApiRequest (Serverless route logic)', () => {
 
     const result = await handleSurveyApiRequest(payload, {
       webhookUrl: 'https://script.google.com/macros/s/TEST/exec',
+      postgresUrl: '',
       fetchFn: mockFetch as unknown as typeof fetch,
     });
 
@@ -303,6 +365,7 @@ describe('handleSurveyApiRequest (Serverless route logic)', () => {
       { overallRating: 8, evaluatorRole: 'patient_public' },
       {
         webhookUrl: 'https://script.google.com/macros/s/TEST/exec',
+        postgresUrl: '',
         fetchFn: mockFetch as unknown as typeof fetch,
       }
     );
