@@ -200,3 +200,86 @@ describe('medgemmaChatService — red-flag report hygiene', () => {
     expect(result.state.report).toContain('Interview terminated due to emergency red flag.');
   });
 });
+
+describe('medgemmaChatService — off-track & clinical alignment redirection', () => {
+  it('protects presentingComplaint and question budget on opening off-topic messages', async () => {
+    let state = initializeChatSession('', 'Guest Patient');
+    const r1 = await processPatientMessage(state, 'hi');
+    expect(r1.assistantReply.offTrackRedirect).toBe(true);
+    expect(r1.state.presentingComplaint).toBe('');
+    expect(r1.state.interviewPolicy?.questionsAsked).toBe(1);
+
+    const r2 = await processPatientMessage(r1.state, 'tell me a joke about cats');
+    expect(r2.assistantReply.offTrackRedirect).toBe(true);
+    expect(r2.assistantReply.content).not.toBe(r1.assistantReply.content);
+    expect(r2.state.presentingComplaint).toBe('');
+    expect(r2.state.report).not.toContain('tell me a joke');
+    expect(r2.state.interviewPolicy?.questionsAsked).toBe(1);
+
+    // Real complaint starts the interview normally once provided
+    const r3 = await processPatientMessage(r2.state, 'Severe headache since this morning');
+    expect(r3.assistantReply.offTrackRedirect).toBeUndefined();
+    expect(r3.state.presentingComplaint).toBe('Severe headache since this morning');
+    expect(r3.state.interviewPolicy?.questionsAsked).toBe(2);
+  });
+
+  it('redirects mid-interview non-clinical chatter without polluting the report or closing the active topic', async () => {
+    let state = initializeChatSession('', 'Guest Patient');
+    state = (await processPatientMessage(state, 'Sharp knee pain after playing football')).state;
+    const pendingTopic = state.interviewPolicy?.lastSelectedTopic;
+    expect(pendingTopic).toBe('chief_complaint_onset_timeline');
+    const budgetBefore = state.interviewPolicy?.questionsAsked;
+
+    const deflected = await processPatientMessage(state, 'What is the weather like in London today?');
+    expect(deflected.assistantReply.offTrackRedirect).toBe(true);
+    expect(deflected.assistantReply.content.toLowerCase()).toContain('when did your symptoms');
+    expect(deflected.state.interviewPolicy?.lastSelectedTopic).toBe(pendingTopic);
+    expect(deflected.state.interviewPolicy?.blockedTopics).not.toContain(pendingTopic);
+    expect(deflected.state.interviewPolicy?.questionsAsked).toBe(budgetBefore);
+    expect(deflected.state.report).not.toContain('London');
+  });
+
+  it('acknowledges and opportunistically captures off-target clinical facts while refocusing on the active question', async () => {
+    let state = initializeChatSession('', 'Guest Patient');
+    state = (await processPatientMessage(state, 'Persistent migraine headache')).state;
+    expect(state.interviewPolicy?.lastSelectedTopic).toBe('chief_complaint_onset_timeline');
+    const budgetBefore = state.interviewPolicy?.questionsAsked;
+
+    // Patient shares meds & allergies instead of answering onset
+    const offTarget = await processPatientMessage(
+      state,
+      'I take 20mg Omeprazole daily and I am allergic to penicillin',
+    );
+    expect(offTarget.assistantReply.offTrackRedirect).toBe(true);
+    expect(offTarget.assistantReply.content.toLowerCase()).toContain('noted your medications and allergies');
+    expect(offTarget.assistantReply.content.toLowerCase()).toContain('when did your symptoms');
+
+    // Active topic stays open & budget preserved
+    expect(offTarget.state.interviewPolicy?.lastSelectedTopic).toBe('chief_complaint_onset_timeline');
+    expect(offTarget.state.interviewPolicy?.blockedTopics).not.toContain('chief_complaint_onset_timeline');
+    expect(offTarget.state.interviewPolicy?.questionsAsked).toBe(budgetBefore);
+
+    // Opportunistic facts appear under the rightful report rows with transcript citation
+    expect(offTarget.state.report).toContain('I take 20mg Omeprazole daily');
+    expect(offTarget.state.report).toContain('I am allergic to penicillin');
+    expect(offTarget.state.report).toMatch(/\*\*Medications\*\*: I take 20mg Omeprazole daily \[\[\d+\]\]/);
+    expect(offTarget.state.report).toMatch(/\*\*Allergies\*\*: I am allergic to penicillin \[\[\d+\]\]/);
+
+    // Next turn, patient actually answers onset -> onset is documented and interview moves on
+    const onTrack = await processPatientMessage(offTarget.state, 'It started three days ago');
+    expect(onTrack.assistantReply.offTrackRedirect).toBeUndefined();
+    expect(onTrack.state.report).toMatch(/\*\*Onset & Duration\*\*: It started three days ago \[\[\d+\]\]/);
+    expect(onTrack.state.interviewPolicy?.lastSelectedTopic).not.toBe('chief_complaint_onset_timeline');
+  });
+
+  it('redirects clinical questions asked by the patient back to the active intake question', async () => {
+    let state = initializeChatSession('', 'Guest Patient');
+    state = (await processPatientMessage(state, 'Sore throat and body aches')).state;
+    expect(state.interviewPolicy?.lastSelectedTopic).toBe('chief_complaint_onset_timeline');
+
+    const patientQuestion = await processPatientMessage(state, 'Could this be strep throat?');
+    expect(patientQuestion.assistantReply.offTrackRedirect).toBe(true);
+    expect(patientQuestion.assistantReply.content.toLowerCase()).toContain('when did your symptoms');
+    expect(patientQuestion.state.interviewPolicy?.lastSelectedTopic).toBe('chief_complaint_onset_timeline');
+  });
+});

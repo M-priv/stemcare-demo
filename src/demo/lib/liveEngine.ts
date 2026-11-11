@@ -302,6 +302,7 @@ async function runInterviewer(body: DemoApiRequest, opts: { apiKey: string; mode
       selectedTopic,
       selectedTopicRationale: asString(raw.selectedTopicRationale, 300) ?? '',
       blockedTopics,
+      redirectHint: asString(raw.redirectHint, 300) ?? undefined,
     };
   }
 
@@ -310,7 +311,7 @@ async function runInterviewer(body: DemoApiRequest, opts: { apiKey: string; mode
   if (!text) return fallbackResponse(502, 'model_unavailable');
 
   // Gate: single-question format + assistive-only policy, server-side.
-  const validated = validateGeneratedQuestion(text);
+  const validated = validateGeneratedQuestion(text, { allowRedirect: Boolean(control?.redirectHint) });
   if (!validated.valid) return fallbackResponse(200, `question_format_${validated.reason}`);
   const guardrail = evaluateAssistiveOnlyGuardrails(validated.question);
   if (guardrail.action !== 'allow') return fallbackResponse(200, 'guardrail_' + guardrail.action);

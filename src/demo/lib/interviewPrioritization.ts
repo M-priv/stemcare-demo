@@ -173,6 +173,9 @@ export function createInitialInterviewPolicy(): InterviewPolicyState {
     lowYieldStreak: 0,
     noCandidateStreak: 0,
     recentTopics: [],
+    offTrackStreak: 0,
+    sessionClinicalRefocusCount: 0,
+    topicRefocusCounts: {},
   };
 }
 
@@ -331,6 +334,53 @@ export function applyUserAnswerToPolicy(
     blockedTopics: updatedBlocked,
     recentTopics: updatedRecent,
     lastSelectedTopic: topic,
+    offTrackStreak: 0,
+  };
+}
+
+/**
+ * Opportunistically captures a clinical fact volunteered for a different topic
+ * (e.g., medications shared while asked about symptom onset) without advancing
+ * the turn count or closing the currently unanswered active topic.
+ */
+export function applyOpportunisticFindingToPolicy(
+  policy: InterviewPolicyState,
+  targetTopic: InterviewTopic,
+  findingText: string,
+  answerMessageIndex?: number,
+): InterviewPolicyState {
+  const cleaned = findingText.trim();
+  if (!cleaned) return policy;
+
+  const existingFinding = policy.topicFindings?.[targetTopic];
+  const updatedFindings = existingFinding
+    ? policy.topicFindings
+    : { ...policy.topicFindings, [targetTopic]: cleaned };
+
+  const existingIndex = policy.topicFindingIndexes?.[targetTopic];
+  const updatedIndexes =
+    existingIndex || !answerMessageIndex
+      ? policy.topicFindingIndexes
+      : { ...policy.topicFindingIndexes, [targetTopic]: answerMessageIndex };
+
+  const currentCount = countForTopic(policy, targetTopic);
+  const updatedCounts = {
+    ...policy.askedTopicCounts,
+    [targetTopic]: Math.max(currentCount, 1),
+  };
+
+  const isAmbiguous = AMBIGUOUS_PATTERNS.some((p) => p.test(cleaned));
+  const updatedBlocked = [...policy.blockedTopics];
+  if (!isAmbiguous && !updatedBlocked.includes(targetTopic)) {
+    updatedBlocked.push(targetTopic);
+  }
+
+  return {
+    ...policy,
+    askedTopicCounts: updatedCounts,
+    topicFindings: updatedFindings,
+    topicFindingIndexes: updatedIndexes,
+    blockedTopics: updatedBlocked,
   };
 }
 
@@ -466,9 +516,13 @@ export function sanitizeQuestionOutput(text: string): string {
 
 /**
  * Deterministic Question Validation Guardrail
- * Ported verbatim from STEMCare interviewPrioritization.ts
+ * Ported from STEMCare interviewPrioritization.ts, extended to permit
+ * concise clinical refocus/redirection lead-ins (<=28 words) on redirect turns.
  */
-export function validateGeneratedQuestion(text: string): {
+export function validateGeneratedQuestion(
+  text: string,
+  options?: { allowRedirect?: boolean },
+): {
   valid: boolean;
   question: string;
   reason?: string;
@@ -507,7 +561,8 @@ export function validateGeneratedQuestion(text: string): {
     return { valid: false, question: '', reason: 'empty_question' };
   }
 
-  if (wordCount > 20) {
+  const maxWords = options?.allowRedirect ? 28 : 20;
+  if (wordCount > maxWords) {
     return { valid: false, question: '', reason: 'too_long' };
   }
 

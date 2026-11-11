@@ -971,6 +971,37 @@ p {
   color: #f87171;
 }
 
+.demo-msg--redirect .demo-msg__bubble {
+  background: rgba(217, 119, 6, 0.06);
+  border: 1px solid rgba(217, 119, 6, 0.14);
+}
+
+:root[data-theme="dark"] .demo-msg--redirect .demo-msg__bubble {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.16);
+}
+
+.demo-msg__redirect-callout {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 9999px;
+  background: rgba(217, 119, 6, 0.1);
+  backdrop-filter: blur(8px);
+  color: #92400e;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+:root[data-theme="dark"] .demo-msg__redirect-callout {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+
 .demo-msg__prose {
   font-size: 0.9rem;
   line-height: 1.55;

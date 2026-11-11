@@ -420,7 +420,8 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
       role: m.role,
       content: m.content,
       timestamp: m.timestamp,
-      variant: m.redFlag ? 'red_flag' : 'normal',
+      variant: m.redFlag ? 'red_flag' : m.offTrackRedirect ? 'warning' : 'normal',
+      topicTag: m.redirectBadge,
       simulated: simulationConfig ? m.role === 'user' : false,
     };
   });
@@ -491,7 +492,7 @@ export const MedGemmaDemoPage: React.FC<MedGemmaDemoPageProps> = ({
   const activeScenario = DEMO_SCENARIOS.find((s) => s.id === currentScenarioId);
   const currentTurnChips =
     currentScenarioId === 'custom'
-      ? userMessageCount === 0
+      ? !chatState.presentingComplaint
         ? CUSTOM_STARTER_CHIPS
         : undefined
       : activeScenario?.turns[Math.min(userMessageCount, activeScenario.turns.length - 1)]?.suggestedChips;

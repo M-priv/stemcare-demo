@@ -159,6 +159,29 @@ describe('liveEngine — interviewer gating', () => {
     expect(result.status).toBe(502);
     expect(result.body.fallback).toBe(true);
   });
+
+  it('permits concise redirections (<= 28 words) when redirectHint is supplied', async () => {
+    const redirectReply =
+      'I have noted your medications for your doctor, and to help them understand your current illness, when did your knee pain first start?';
+    mockGemini(geminiText(redirectReply));
+    const result = await handleDemoApiRequest(
+      {
+        role: 'interviewer',
+        history: [{ role: 'user', content: 'I take 20mg Omeprazole' }],
+        complaint: 'Knee pain',
+        control: {
+          questionsAsked: 2,
+          selectedTopic: 'chief_complaint_onset_timeline',
+          selectedTopicRationale: 'redirect',
+          blockedTopics: [],
+          redirectHint: 'Patient shared meds instead of onset. Acknowledge and re-ask onset.',
+        },
+      },
+      baseOpts,
+    );
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ text: redirectReply });
+  });
 });
 
 describe('liveEngine — report writer gating', () => {

@@ -12,6 +12,10 @@ export interface MedGemmaChatMessage {
   timestamp: string;
   /** Set on the deterministic emergency-escalation assistant message. */
   redFlag?: boolean;
+  /** Set when the assistant redirects an off-topic or misaligned response back to intake. */
+  offTrackRedirect?: boolean;
+  /** Subtle focus pill text displayed below redirected assistant messages. */
+  redirectBadge?: string;
 }
 
 export type InterviewTopic =
@@ -46,6 +50,8 @@ export interface InterviewControlContext {
   selectedTopicRationale: string;
   blockedTopics: InterviewTopic[];
   clarificationAllowedForTopic?: InterviewTopic;
+  /** Present when the patient's latest message was off-track and needs clinical refocusing. */
+  redirectHint?: string;
 }
 
 export interface InterviewPolicyState {
@@ -61,6 +67,12 @@ export interface InterviewPolicyState {
   lastSelectedTopic?: InterviewTopic;
   recentTopics?: InterviewTopic[];
   terminationReason?: InterviewTerminationReason;
+  /** Consecutive off-track turns used to vary redirect phrasing without burning question budget. */
+  offTrackStreak?: number;
+  /** Number of clinical refocus turns in this session (capped to avoid nagging). */
+  sessionClinicalRefocusCount?: number;
+  /** Per-topic count of clinical misalignment refocuses (capped at 1 per topic). */
+  topicRefocusCounts?: Partial<Record<InterviewTopic, number>>;
 }
 
 export interface MedGemmaChatState {

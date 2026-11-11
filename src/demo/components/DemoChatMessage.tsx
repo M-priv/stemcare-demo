@@ -11,6 +11,7 @@ interface DemoChatMessageProps {
 export const DemoChatMessage: React.FC<DemoChatMessageProps> = ({ message, transcriptIndex }) => {
   const isUser = message.role === 'user';
   const isRedFlag = message.variant === 'red_flag';
+  const isRedirect = message.variant === 'warning';
 
   // Render markdown safely for assistant messages
   const renderedContent = React.useMemo(() => {
@@ -23,7 +24,7 @@ export const DemoChatMessage: React.FC<DemoChatMessageProps> = ({ message, trans
       data-chat-msg-index={transcriptIndex}
       className={`demo-msg ${
         isUser ? 'demo-msg--user' : 'demo-msg--assistant'
-      } ${isRedFlag ? 'demo-msg--red-flag' : ''}`}
+      } ${isRedFlag ? 'demo-msg--red-flag' : ''} ${isRedirect ? 'demo-msg--redirect' : ''}`}
     >
       <div className="demo-msg__bubble-container">
         <div className="demo-msg__header">
@@ -45,6 +46,12 @@ export const DemoChatMessage: React.FC<DemoChatMessageProps> = ({ message, trans
         {isRedFlag && (
           <div className="demo-msg__red-flag-callout">
             <span>Emergency safety rule triggered. Consultation halted for clinical escalation.</span>
+          </div>
+        )}
+
+        {isRedirect && (
+          <div className="demo-msg__redirect-callout">
+            <span>{message.topicTag || 'Consultation Focus · Refocusing on active question'}</span>
           </div>
         )}
       </div>

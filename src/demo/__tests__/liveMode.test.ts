@@ -116,6 +116,34 @@ describe('chatService in live mode — gates and fallback', () => {
     expect(result.redFlagDetected).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled(); // emergency gate is local-only
   });
+
+  it('skips report_writer and uses redirectQuestion fallback on non-clinical off-track turns', async () => {
+    const rolesCalled: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string | URL, init?: RequestInit) => {
+        const parsed = JSON.parse(String(init?.body ?? '{}')) as { role?: string };
+        if (parsed.role) rolesCalled.push(parsed.role);
+        return { ok: false, status: 503 };
+      }) as unknown as typeof fetch,
+    );
+
+    let state = initializeChatSession('Sharp knee pain', 'Guest Patient');
+    // Put policy past opening turn so active topic is set
+    state = {
+      ...state,
+      interviewPolicy: {
+        ...state.interviewPolicy!,
+        lastSelectedTopic: 'chief_complaint_onset_timeline',
+      },
+    };
+
+    const result = await processPatientMessage(state, 'tell me a joke');
+    expect(rolesCalled).toEqual(['interviewer']);
+    expect(rolesCalled).not.toContain('report_writer');
+    expect(result.assistantReply.offTrackRedirect).toBe(true);
+    expect(result.assistantReply.content.toLowerCase()).toContain('when did your symptoms');
+  });
 });
 
 describe('requestInterviewerTurn — payload shape', () => {
